@@ -1,0 +1,24 @@
+const express=require('express');const cors=require('cors');const crypto=require('crypto');
+const app=express();app.use(express.json({limit:'8mb'}));app.use(cors({origin:true}));
+const PORT=process.env.PORT||10000;const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||'change-this-password';
+const now=()=>new Date().toISOString();
+let shipments=[
+{ id:'1',trackingNumber:'PT10001',customerName:'Demo Customer',customerEmail:'demo@example.com',itemDescription:'Wireless Headphones',carrier:'ParcelTrack',origin:'Toronto, Canada',destination:'Zurich, Switzerland',status:'In transit',eta:'2026-10-02',events:[{date:'Sep 24, 2026 · 09:18',location:'Toronto, Canada',status:'Shipment picked up'},{date:'Sep 24, 2026 · 16:42',location:'Toronto, Canada',status:'Processed at facility'},{date:'Sep 25, 2026 · 02:10',location:'Toronto, Canada',status:'Departed international hub'}],createdAt:now()},
+{ id:'2',trackingNumber:'PT10002',customerName:'Demo Customer',customerEmail:'demo@example.com',itemDescription:'Smart Watch',carrier:'ParcelTrack',origin:'Geneva, Switzerland',destination:'Zurich, Switzerland',status:'Out for delivery',eta:'2026-09-25',events:[{date:'Sep 23, 2026 · 10:12',location:'Geneva, Switzerland',status:'Shipment picked up'},{date:'Sep 25, 2026 · 06:31',location:'Zurich, Switzerland',status:'Arrived at local facility'}],createdAt:now()}
+];
+const tokens=new Map();
+function admin(req,res,next){const t=req.get('x-admin-token');if(!t||!tokens.has(t))return res.status(401).json({error:'Admin access required'});next()}
+function publicShipment(s){return {id:s.id,tracking:s.trackingNumber,customerName:s.customerName,product:s.itemDescription,country:s.destination,status:s.status,eta:s.eta,origin:s.origin,destination:s.destination,carrier:s.carrier,shippingMethod:'Standard',weight:s.weight,reference:s.reference,currentLocation:s.currentLocation||s.destination,customerEmail:s.customerEmail,lastUpdated:s.updatedAt||s.createdAt,events:s.events.map((e,i)=>({title:e.status,location:e.location,time:e.date,done:i<s.events.length-1||s.status==='Delivered'})),proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined}}
+app.get('/api/_healthcheck',(req,res)=>res.json({message:'Success'}));
+app.post('/api/admin/login',(req,res)=>{if(req.body?.password!==ADMIN_PASSWORD)return res.status(401).json({error:'Incorrect password'});const token=crypto.randomBytes(24).toString('hex');tokens.set(token,{createdAt:now()});res.json({token})});
+app.post('/api/admin/logout',(req,res)=>{tokens.delete(req.get('x-admin-token'));res.json({ok:true})});
+app.get('/api/admin/shipments',admin,(req,res)=>res.json({shipments}));
+app.post('/api/admin/shipments',admin,(req,res)=>{const b=req.body||{};if(!b.trackingNumber||!b.customerName||!b.itemDescription||!b.origin||!b.destination)return res.status(400).json({error:'Required fields are missing'});if(shipments.some(s=>s.trackingNumber.toUpperCase()===String(b.trackingNumber).toUpperCase()))return res.status(409).json({error:'Tracking number already exists'});const s={...b,id:crypto.randomUUID(),trackingNumber:String(b.trackingNumber).toUpperCase(),events:[],createdAt:now()};shipments.unshift(s);res.status(201).json({shipment:s})});
+app.put('/api/admin/shipments/:id',admin,(req,res)=>{const i=shipments.findIndex(s=>s.id===req.params.id);if(i<0)return res.status(404).json({error:'Shipment not found'});shipments[i]={...shipments[i],...req.body,id:shipments[i].id,updatedAt:now()};res.json({shipment:shipments[i]})});
+app.delete('/api/admin/shipments/:id',admin,(req,res)=>{const n=shipments.length;shipments=shipments.filter(s=>s.id!==req.params.id);if(shipments.length===n)return res.status(404).json({error:'Shipment not found'});res.json({deleted:true})});
+app.post('/api/admin/shipments/events',admin,(req,res)=>{const b=req.body||{},s=shipments.find(x=>x.trackingNumber.toUpperCase()===String(b.trackingNumber||'').toUpperCase());if(!s)return res.status(404).json({error:'Shipment not found'});s.events.push({date:now(),location:b.location,status:b.status});s.status=b.status;s.updatedAt=now();res.json({shipment:s})});
+app.get('/api/shipments/:tracking',(req,res)=>{const s=shipments.find(x=>x.trackingNumber.toUpperCase()===req.params.tracking.toUpperCase());if(!s)return res.status(404).json({error:'Tracking number not found'});res.json({shipment:publicShipment(s)})});
+app.get('/api/me',(req,res)=>{const email=req.get('x-user-email');res.json({user:email?{userId:email,email,name:email.split('@')[0],role:'customer'}:null})});
+app.get('/api/my-shipments',(req,res)=>{const email=(req.get('x-user-email')||'').toLowerCase();res.json({shipments:shipments.filter(s=>(s.customerEmail||'').toLowerCase()===email).map(publicShipment)})});
+app.post('/api/support/tickets',(req,res)=>res.status(201).json({ticketId:crypto.randomUUID()}));
+app.listen(PORT,'0.0.0.0',()=>console.log('Parcel Shipment API listening on '+PORT));
