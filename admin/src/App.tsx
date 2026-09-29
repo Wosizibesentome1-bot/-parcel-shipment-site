@@ -3,9 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 const API_BASE = import.meta.env.VITE_API_URL || '';
 const request = async (method:string, path:string, body?:any) => {
   const headers:Record<string,string> = {'Content-Type':'application/json'};
-  const token = sessionStorage.getItem('parceltrack_admin_token');
-  if (token) headers['x-admin-token'] = token;
-  const r = await fetch(API_BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const r = await fetch(API_BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'Request failed');
   return { data };
@@ -36,8 +34,6 @@ const blank = {
 };
 
 function App(){
-  const [authenticated,setAuthenticated]=useState(false);
-  const [password,setPassword]=useState('');
   const [loading,setLoading]=useState(true);
   const [shipments,setShipments]=useState<Shipment[]>([]);
   const [filter,setFilter]=useState('All');
@@ -48,30 +44,7 @@ function App(){
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
 
-  useEffect(()=>{
-    const init=async()=>{
-      const saved=sessionStorage.getItem('parceltrack_admin_token');
-      if(!saved){setLoading(false);return;}
-      try{await refresh();setAuthenticated(true)}catch{sessionStorage.removeItem('parceltrack_admin_token')}
-      finally{setLoading(false)}
-    };
-    void init();
-  },[]);
-
-  const signIn=async(e:React.FormEvent)=>{
-    e.preventDefault(); setError('');
-    try{
-      const r=await api.post('/api/admin/login',{password});
-      sessionStorage.setItem('parceltrack_admin_token',r.data.token);
-      setPassword(''); setAuthenticated(true); await refresh();
-    }catch{setError('Incorrect password.');setPassword('')}
-  };
-
-  const signOut=async()=>{
-    try{await api.post('/api/admin/logout',{})}finally{
-      sessionStorage.removeItem('parceltrack_admin_token');setAuthenticated(false);setShipments([]);
-    }
-  };
+  useEffect(()=>{ void refresh().finally(()=>setLoading(false)); },[]);
 
   const filtered=useMemo(()=>{
     let list=filter==='All'?shipments:shipments.filter(s=>s.status===filter);
@@ -101,22 +74,13 @@ function App(){
 
   if(loading) return <div className="center-screen">Loading admin portal…</div>;
 
-  if(!authenticated) return <div className="login-shell"><form className="login-card" onSubmit={signIn}>
-    <div className="brand-mark">PS</div><p className="eyebrow">PARCEL SHIPMENT</p><h1>Admin Portal</h1>
-    <p className="muted">Enter the administrator password to access shipment management.</p>
-    <label className="login-label">Admin password<input autoFocus type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter password" required/></label>
-    <button className="primary full-width" type="submit">Log in</button>
-    <p className="small">This portal is restricted to authorized administration.</p>
-    {error&&<div className="notice error">{error}</div>}
-  </form></div>;
-
   return <div className="app-shell">
     <header className="topbar">
       <button className="brand" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}><span className="brand-mark">PS</span>Parcel Shipment</button>
       <nav>
         <button onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}>Admin Panel</button>
         <button onClick={()=>void refresh()}>Refresh</button>
-        <button className="nav-signin" onClick={()=>void signOut()}>Sign out</button>
+        
       </nav>
     </header>
     {message&&<div className="toast">{message}<button onClick={()=>setMessage('')}>×</button></div>}
