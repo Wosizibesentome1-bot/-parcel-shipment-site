@@ -21,6 +21,31 @@ const pool=DATABASE_URL?new Pool({
 
 const now=()=>new Date().toISOString();
 const tokens=new Map();
+const hashPassword=(password,salt=crypto.randomBytes(16).toString('hex'))=>{
+  const hash=crypto.scryptSync(String(password),salt,64).toString('hex');
+  return {salt,hash};
+};
+const verifyPassword=(password,salt,hash)=>{
+  const actual=crypto.scryptSync(String(password),salt,64);
+  const expected=Buffer.from(hash,'hex');
+  return actual.length===expected.length&&crypto.timingSafeEqual(actual,expected);
+};
+const makeSessionToken=()=>crypto.randomBytes(32).toString('hex');
+const sessionHash=token=>crypto.createHash('sha256').update(String(token)).digest('hex');
+async function getCustomerBySession(req){
+  const auth=req.get('authorization')||'';
+  const token=auth.startsWith('Bearer ')?auth.slice(7):'';
+  if(!token||!pool)return null;
+  const {rows}=await pool.query(`
+    SELECT c.* FROM customer_sessions cs JOIN customers c ON c.id=cs.customer_id
+    WHERE cs.token_hash=$1 AND cs.expires_at>NOW()
+  `,[sessionHash(token)]);
+  return rows[0]||null;
+}
+function customerPublic(c){
+  if(!c)return null;
+  return {userId:c.id,firstName:c.first_name,lastName:c.last_name,middleName:c.middle_name||'',username:c.username,email:c.email,phone:c.phone,country:c.country,address:c.address_line1,city:c.city,state:c.state,postalCode:c.postal_code,role:'customer'};
+}
 
 async function initDb(){
   if(!pool)return;
@@ -49,6 +74,41 @@ async function initDb(){
       events JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id TEXT PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      middle_name TEXT,
+      username TEXT NOT NULL UNIQUE,
+      email TEXT NOT NULL UNIQUE,
+      phone TEXT NOT NULL,
+      address_line1 TEXT,
+      city TEXT,
+      state TEXT,
+      country TEXT NOT NULL,
+      postal_code TEXT,
+      password_salt TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customer_sessions (
+      token_hash TEXT PRIMARY KEY,
+      customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customer_tracking (
+      customer_id TEXT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+      shipment_id TEXT NOT NULL REFERENCES shipments(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL,
+      PRIMARY KEY(customer_id,shipment_id)
     )
   `);
   await pool.query('CREATE INDEX IF NOT EXISTS shipments_tracking_idx ON shipments (UPPER(tracking_number))');
@@ -210,19 +270,67 @@ app.get('/api/shipments/:tracking',async(req,res)=>{
   }catch(e){res.status(500).json({error:'Unable to load tracking information'});}
 });
 
-app.get('/api/me',(req,res)=>{
-  const email=req.get('x-user-email');
-  res.json({user:email?{userId:email,email,name:email.split('@')[0],role:'customer'}:null});
+app.post('/api/auth/register',async(req,res)=>{
+  try{
+    const b=req.body||{};
+    const required=['firstName','lastName','username','email','phone','country','password','trackingNumber'];
+    if(required.some(k=>!String(b[k]||'').trim()))return res.status(400).json({error:'Please complete all required fields.'});
+    if(String(b.password).length<8)return res.status(400).json({error:'Password must be at least 8 characters.'});
+    if(b.password!==b.confirmPassword)return res.status(400).json({error:'Passwords do not match.'});
+    const username=String(b.username).trim().replace(/^@/,'').toLowerCase();
+    const email=String(b.email).trim().toLowerCase();
+    const tracking=String(b.trackingNumber).trim().toUpperCase();
+    if(!/^[a-z0-9._-]{3,30}$/.test(username))return res.status(400).json({error:'Username must be 3-30 characters and use letters, numbers, dots, underscores or hyphens.'});
+    const existing=await pool.query('SELECT id FROM customers WHERE LOWER(username)=LOWER($1) OR LOWER(email)=LOWER($2) LIMIT 1',[username,email]);
+    if(existing.rows[0])return res.status(409).json({error:'That username or email is already registered.'});
+    const shipment=await getShipmentByTracking(tracking);
+    if(!shipment)return res.status(400).json({error:'The tracking number could not be found.'});
+    const {salt,hash}=hashPassword(b.password);
+    const id=crypto.randomUUID();
+    await pool.query(`
+      INSERT INTO customers(id,first_name,last_name,middle_name,username,email,phone,address_line1,city,state,country,postal_code,password_salt,password_hash,created_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+    `,[id,String(b.firstName).trim(),String(b.lastName).trim(),String(b.middleName||'').trim()||null,username,email,String(b.phone).trim(),String(b.address||'').trim()||null,String(b.city||'').trim()||null,String(b.state||'').trim()||null,String(b.country).trim(),String(b.postalCode||'').trim()||null,salt,hash,now()]);
+    await pool.query('INSERT INTO customer_tracking(customer_id,shipment_id,created_at) VALUES($1,$2,$3)',[id,shipment.id,now()]);
+    const token=makeSessionToken();
+    await pool.query('INSERT INTO customer_sessions(token_hash,customer_id,expires_at,created_at) VALUES($1,$2,NOW()+INTERVAL \'180 days\',$3)',[sessionHash(token),id,now()]);
+    const customer=(await pool.query('SELECT * FROM customers WHERE id=$1',[id])).rows[0];
+    res.status(201).json({token,user:customerPublic(customer)});
+  }catch(e){res.status(500).json({error:'Unable to create account.'});}
 });
-
+app.post('/api/auth/login',async(req,res)=>{
+  try{
+    const usernameOrEmail=String(req.body?.usernameOrEmail||'').trim().toLowerCase();
+    const password=String(req.body?.password||'');
+    const {rows}=await pool.query('SELECT * FROM customers WHERE LOWER(username)=LOWER($1) OR LOWER(email)=LOWER($1) LIMIT 1',[usernameOrEmail]);
+    const customer=rows[0];
+    if(!customer||!verifyPassword(password,customer.password_salt,customer.password_hash))return res.status(401).json({error:'Incorrect username/email or password.'});
+    const token=makeSessionToken();
+    await pool.query('INSERT INTO customer_sessions(token_hash,customer_id,expires_at,created_at) VALUES($1,$2,NOW()+INTERVAL \'180 days\',$3)',[sessionHash(token),customer.id,now()]);
+    res.json({token,user:customerPublic(customer)});
+  }catch(e){res.status(500).json({error:'Unable to sign in.'});}
+});
+app.post('/api/auth/logout',async(req,res)=>{
+  const auth=req.get('authorization')||'';
+  const token=auth.startsWith('Bearer ')?auth.slice(7):'';
+  if(token&&pool)await pool.query('DELETE FROM customer_sessions WHERE token_hash=$1',[sessionHash(token)]);
+  res.json({ok:true});
+});
+app.get('/api/me',async(req,res)=>{
+  try{const customer=await getCustomerBySession(req);res.json({user:customerPublic(customer)});}
+  catch(e){res.status(500).json({error:'Unable to load account.'});}
+});
 app.get('/api/my-shipments',async(req,res)=>{
   try{
-    const email=(req.get('x-user-email')||'').toLowerCase();
-    const shipments=(await getAllShipments()).filter(s=>(s.customerEmail||'').toLowerCase()===email).map(publicShipment);
-    res.json({shipments});
+    const customer=await getCustomerBySession(req);
+    if(!customer)return res.status(401).json({error:'Please sign in.'});
+    const {rows}=await pool.query(`
+      SELECT s.* FROM shipments s JOIN customer_tracking ct ON ct.shipment_id=s.id
+      WHERE ct.customer_id=$1 ORDER BY s.created_at DESC
+    `,[customer.id]);
+    res.json({shipments:rows.map(rowToShipment).map(publicShipment)});
   }catch(e){res.status(500).json({error:'Unable to load shipments'});}
 });
-
 app.post('/api/support/tickets',(req,res)=>res.status(201).json({ticketId:crypto.randomUUID()}));
 
 initDb().then(()=>{
