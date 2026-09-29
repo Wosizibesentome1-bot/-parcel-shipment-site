@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://parcel-shipment-api.onrender.com';
+const generateTrackingNumber = () => 'PT' + Date.now().toString().slice(-8) + Math.floor(100 + Math.random() * 900);
 const request = async (method:string, path:string, body?:any) => {
   const headers:Record<string,string> = {'Content-Type':'application/json'};
     const r = await fetch(API_BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -59,8 +60,10 @@ function App(){
       if(existing?.id) await api.put('/api/admin/shipments/'+existing.id,form);
       else await api.post('/api/admin/shipments',{
         ...form,
-        trackingNumber:String(form.trackingNumber||'').trim().toUpperCase(),
-        itemDescription:form.itemDescription||form.product||''
+        trackingNumber:String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase(),
+        itemDescription:form.itemDescription||form.product||'',
+        origin:form.origin||'Parcel Shipment Warehouse',
+        destination:form.destination||form.country||'To be confirmed'
       });
       setEditor(false); await refresh(); setMessage(existing?'Tracking record updated.':'Tracking record created.');
     }catch(e:any){setError(e?.message||'Could not save shipment.')}
@@ -113,7 +116,7 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     ...blank,...shipment,
     itemDescription:shipment.itemDescription||'',
     itemImages:shipment.itemImages||[]
-  }:blank);
+  }:{...blank,trackingNumber:generateTrackingNumber()});
   const [saving,setSaving]=useState(false);
   const [imageBusy,setImageBusy]=useState(false);
   const set=(k:string,v:any)=>setForm((x:any)=>({...x,[k]:v}));
@@ -125,8 +128,8 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     }))).then(added=>set('itemImages',[...(form.itemImages||[]),...added])).catch(()=>setError('Could not read one of the images.')).finally(()=>setImageBusy(false));
   };
   const submit=async()=>{
-    if(!form.trackingNumber||!form.customerName||!form.itemDescription||!form.country){
-      setError('Tracking number, customer name, product and country are required.');return;
+    if(!form.customerName||!form.itemDescription||!form.country){
+      setError('Customer name, product and destination country are required.');return;
     }
     setSaving(true);await save(form,shipment);setSaving(false);
   };
