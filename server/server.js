@@ -10,6 +10,8 @@ app.use(cors({origin:true}));
 const PORT=process.env.PORT||10000;
 const ADMIN_PASSWORD=process.env.ADMIN_PASSWORD||'change-this-password';
 const DATABASE_URL=process.env.DATABASE_URL;
+const RESEND_API_KEY=process.env.RESEND_API_KEY;
+const RESEND_FROM_EMAIL=process.env.RESEND_FROM_EMAIL||'Parcel Shipment <onboarding@resend.dev>';
 if(!DATABASE_URL) console.warn('DATABASE_URL is not set. Persistent storage is unavailable until it is configured.');
 
 const pool=DATABASE_URL?new Pool({
@@ -149,6 +151,41 @@ async function saveShipment(s){
   ]);
 }
 
+async function sendShipmentReceivedEmail(shipment){
+  if(!shipment.customerEmail||!RESEND_API_KEY){
+    if(shipment.customerEmail) console.warn('Shipment email not sent: RESEND_API_KEY is not configured.');
+    return {sent:false,reason:RESEND_API_KEY?'no_email':'no_api_key'};
+  }
+  const firstName=String(shipment.customerName||'Customer').trim().split(/\\s+/)[0]||'Customer';
+  const tracking=shipment.trackingNumber;
+  const eta=shipment.eta||'To be confirmed';
+  const destination=shipment.destination||'your destination';
+  const product=shipment.itemDescription||'your shipment';
+  const html=`
+  <div style="margin:0;background:#f5f7fb;padding:32px 16px;font-family:Arial,sans-serif;color:#172033">
+    <div style="max-width:620px;margin:auto;background:#fff;border:1px solid #e5e9f0;border-radius:14px;overflow:hidden">
+      <div style="background:#071521;padding:26px 30px;color:#fff"><div style="font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700">Parcel Shipment</div><h1 style="margin:10px 0 0;font-size:27px">Shipment order received</h1></div>
+      <div style="padding:30px">
+        <p style="font-size:16px">Hello ${firstName},</p>
+        <p style="line-height:1.65;color:#526074">Your shipment order has been received and your tracking record has been created successfully. You can use your tracking number to view the latest shipment updates.</p>
+        <div style="background:#f7f9fc;border:1px solid #e3e8ef;border-radius:10px;padding:18px;margin:22px 0">
+          <div style="font-size:12px;color:#718096;text-transform:uppercase;font-weight:700">Tracking number</div>
+          <div style="font-size:22px;font-weight:800;margin-top:6px;letter-spacing:.5px">${tracking}</div>
+          <div style="margin-top:15px;font-size:14px;color:#526074"><strong>Shipment:</strong> ${product}</div>
+          <div style="margin-top:7px;font-size:14px;color:#526074"><strong>Destination:</strong> ${destination}</div>
+          <div style="margin-top:7px;font-size:14px;color:#526074"><strong>Estimated delivery:</strong> ${eta}</div>
+        </div>
+        <p style="line-height:1.65;color:#526074">Your shipment is now in our tracking system. Please keep your tracking number for reference. Further updates will appear as your shipment progresses through each stage of delivery.</p>
+        <p style="margin-top:26px;color:#526074">Thank you for choosing Parcel Shipment.</p>
+        <div style="margin-top:28px;padding-top:18px;border-top:1px solid #edf0f4;font-size:12px;color:#8792a2">This is an automated shipment notification. Please do not reply to this email.</div>
+      </div>
+    </div>
+  </div>`;
+  const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:RESEND_FROM_EMAIL,to:[shipment.customerEmail],subject:'Your shipment order has been received — '+tracking,html})});
+  if(!response.ok){const detail=await response.text();console.error('Shipment email failed:',detail);return {sent:false,reason:'provider_error'};}
+  return {sent:true};
+}
+
 async function getAllShipments(){
   const {rows}=await pool.query('SELECT * FROM shipments ORDER BY created_at DESC');
   return rows.map(rowToShipment);
@@ -215,7 +252,8 @@ app.post('/api/admin/shipments',async(req,res)=>{
     if(await getShipmentByTracking(tracking))return res.status(409).json({error:'Tracking number already exists'});
     const s={...b,id:crypto.randomUUID(),trackingNumber:tracking,events:Array.isArray(b.events)?b.events:[],createdAt:now()};
     await saveShipment(s);
-    res.status(201).json({shipment:s});
+    const email=await sendShipmentReceivedEmail(s);
+    res.status(201).json({shipment:s,email});
   }catch(e){res.status(500).json({error:'Unable to create shipment'});}
 });
 
