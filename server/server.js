@@ -15,6 +15,7 @@ if(!DATABASE_URL) console.warn('DATABASE_URL is not set. Persistent storage is u
 const pool=DATABASE_URL?new Pool({
   connectionString:DATABASE_URL,
   ssl:{rejectUnauthorized:false},
+  family:4,
   max:5
 }):null;
 
