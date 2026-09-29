@@ -141,12 +141,12 @@ app.post('/api/admin/logout',(req,res)=>{
   res.json({ok:true});
 });
 
-app.get('/api/admin/shipments',admin,async(req,res)=>{
+app.get('/api/admin/shipments',async(req,res)=>{
   try{res.json({shipments:await getAllShipments()});}
   catch(e){res.status(500).json({error:'Unable to load shipments'});}
 });
 
-app.post('/api/admin/shipments',admin,async(req,res)=>{
+app.post('/api/admin/shipments',async(req,res)=>{
   try{
     const b=req.body||{};
     if(!b.trackingNumber||!b.customerName||!b.itemDescription||!b.origin||!b.destination)
@@ -159,7 +159,7 @@ app.post('/api/admin/shipments',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:'Unable to create shipment'});}
 });
 
-app.put('/api/admin/shipments/:id',admin,async(req,res)=>{
+app.put('/api/admin/shipments/:id',async(req,res)=>{
   try{
     const existing=await getShipmentById(req.params.id);
     if(!existing)return res.status(404).json({error:'Shipment not found'});
@@ -183,7 +183,7 @@ app.put('/api/admin/shipments/:id',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:'Unable to update shipment'});}
 });
 
-app.delete('/api/admin/shipments/:id',admin,async(req,res)=>{
+app.delete('/api/admin/shipments/:id',async(req,res)=>{
   try{
     const result=await pool.query('DELETE FROM shipments WHERE id=$1',[req.params.id]);
     if(!result.rowCount)return res.status(404).json({error:'Shipment not found'});
@@ -191,7 +191,7 @@ app.delete('/api/admin/shipments/:id',admin,async(req,res)=>{
   }catch(e){res.status(500).json({error:'Unable to delete shipment'});}
 });
 
-app.post('/api/admin/shipments/events',admin,async(req,res)=>{
+app.post('/api/admin/shipments/events',async(req,res)=>{
   try{
     const b=req.body||{};
     const s=await getShipmentByTracking(b.trackingNumber||'');
