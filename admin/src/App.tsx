@@ -4,9 +4,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'https://parcel-shipment-api.on
 const generateTrackingNumber = () => 'PT' + Date.now().toString().slice(-8) + Math.floor(100 + Math.random() * 900);
 const request = async (method:string, path:string, body?:any) => {
   const headers:Record<string,string> = {'Content-Type':'application/json'};
-  const token=sessionStorage.getItem('parcel_admin_token');
-  if(token) headers['x-admin-token']=token;
-    const r = await fetch(API_BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await fetch(API_BASE + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'Request failed');
   return { data };
@@ -38,9 +36,6 @@ const blank = {
 
 function App(){
   const [loading,setLoading]=useState(true);
-  const [authRequired,setAuthRequired]=useState(!sessionStorage.getItem('parcel_admin_token'));
-  const [password,setPassword]=useState('');
-  const [authBusy,setAuthBusy]=useState(false);
   const [shipments,setShipments]=useState<Shipment[]>([]);
   const [filter,setFilter]=useState('All');
   const [search,setSearch]=useState('');
@@ -50,9 +45,7 @@ function App(){
   const [error,setError]=useState('');
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
-  const login=async()=>{setAuthBusy(true);setError('');try{const r=await request('POST','/api/admin/login',{password});sessionStorage.setItem('parcel_admin_token',r.data.token);setAuthRequired(false);setPassword('');await refresh();}catch(e:any){setError(e?.message||'Incorrect admin password.')}finally{setAuthBusy(false)}};
-
-  useEffect(()=>{if(!authRequired) void refresh().catch((e:any)=>{if(e?.message==='Admin access required'){sessionStorage.removeItem('parcel_admin_token');setAuthRequired(true)}else setError(e?.message||'Could not load shipments.')}).finally(()=>setLoading(false));else setLoading(false)},[authRequired]);
+  useEffect(()=>{void refresh().catch((e:any)=>setError(e?.message||'Could not load shipments.')).finally(()=>setLoading(false))},[]);
 
   const filtered=useMemo(()=>{
     let list=filter==='All'?shipments:shipments.filter(s=>s.status===filter);
@@ -75,7 +68,7 @@ function App(){
       setEditor(false); await refresh();
       if(!existing){setCreatedTracking(String(form.trackingNumber||'').trim().toUpperCase());}
       setMessage(existing?'Tracking record updated.':'Tracking record created.');
-    }catch(e:any){if(e?.message==='Admin access required'){sessionStorage.removeItem('parcel_admin_token');setAuthRequired(true);setEditor(false);setError('Admin login expired. Please sign in again.')}else setError(e?.message||'Could not save shipment.')}
+    }catch(e:any){setError(e?.message||'Could not save shipment.')}
   };
 
   const remove=async(s:Shipment)=>{
@@ -86,8 +79,6 @@ function App(){
 
   if(loading) return <div className="center-screen">Loading admin portal…</div>;
   if(createdTracking) return <div className="center-screen"><div className="success-card"><div className="success-icon">✓</div><div className="eyebrow">Tracking created successfully</div><h1>Tracking number created</h1><p>Your tracking record has been created successfully.</p><div className="tracking-copy"><strong>{createdTracking}</strong><button className="primary" onClick={()=>navigator.clipboard?.writeText(createdTracking)}>Copy tracking number</button></div><button className="secondary" onClick={()=>setCreatedTracking('')}>Back to admin panel</button></div></div>;
-  if(authRequired) return <div className="center-screen"><div className="login-card"><div className="eyebrow">Private admin panel</div><h1>Admin sign in</h1><p>Enter the admin password to manage tracking records.</p><input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void login()}} placeholder="Admin password" autoFocus/><button className="primary" onClick={()=>void login()} disabled={authBusy||!password}>{authBusy?'Signing in…':'Sign in'}</button>{error&&<div className="login-error">{error}</div>}</div></div>;
-
   return <div className="app-shell">
     <header className="topbar">
       <button className="brand" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}><span className="brand-mark">PS</span>Parcel Shipment</button>
