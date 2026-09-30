@@ -46,6 +46,7 @@ function App(){
   const [search,setSearch]=useState('');
   const [editor,setEditor]=useState<Shipment|null|false>(false);
   const [message,setMessage]=useState('');
+  const [createdTracking,setCreatedTracking]=useState('');
   const [error,setError]=useState('');
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
@@ -71,7 +72,9 @@ function App(){
         origin:form.origin||'Parcel Shipment Warehouse',
         destination:form.destination||form.country||'To be confirmed'
       });
-      setEditor(false); await refresh(); setMessage(existing?'Tracking record updated.':'Tracking record created.');
+      setEditor(false); await refresh();
+      if(!existing){setCreatedTracking(String(form.trackingNumber||'').trim().toUpperCase());}
+      setMessage(existing?'Tracking record updated.':'Tracking record created.');
     }catch(e:any){if(e?.message==='Admin access required'){sessionStorage.removeItem('parcel_admin_token');setAuthRequired(true);setEditor(false);setError('Admin login expired. Please sign in again.')}else setError(e?.message||'Could not save shipment.')}
   };
 
@@ -82,6 +85,7 @@ function App(){
   };
 
   if(loading) return <div className="center-screen">Loading admin portal…</div>;
+  if(createdTracking) return <div className="center-screen"><div className="success-card"><div className="success-icon">✓</div><div className="eyebrow">Tracking created successfully</div><h1>Tracking number created</h1><p>Your tracking record has been created successfully.</p><div className="tracking-copy"><strong>{createdTracking}</strong><button className="primary" onClick={()=>navigator.clipboard?.writeText(createdTracking)}>Copy tracking number</button></div><button className="secondary" onClick={()=>setCreatedTracking('')}>Back to admin panel</button></div></div>;
   if(authRequired) return <div className="center-screen"><div className="login-card"><div className="eyebrow">Private admin panel</div><h1>Admin sign in</h1><p>Enter the admin password to manage tracking records.</p><input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void login()}} placeholder="Admin password" autoFocus/><button className="primary" onClick={()=>void login()} disabled={authBusy||!password}>{authBusy?'Signing in…':'Sign in'}</button>{error&&<div className="login-error">{error}</div>}</div></div>;
 
   return <div className="app-shell">
