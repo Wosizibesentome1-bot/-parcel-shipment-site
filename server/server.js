@@ -1,6 +1,7 @@
 const express=require('express');
 const cors=require('cors');
 const crypto=require('crypto');
+const dns=require('dns');
 const {Pool}=require('pg');
 
 const app=express();
@@ -17,8 +18,8 @@ if(!DATABASE_URL) console.warn('DATABASE_URL is not set. Persistent storage is u
 const pool=DATABASE_URL?new Pool({
   connectionString:DATABASE_URL,
   ssl:{rejectUnauthorized:false},
-  family:4,
-  max:5
+  max:5,
+  lookup:(hostname,options,callback)=>dns.lookup(hostname,{family:4},callback)
 }):null;
 
 const now=()=>new Date().toISOString();
