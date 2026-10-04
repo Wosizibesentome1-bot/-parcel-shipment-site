@@ -3,6 +3,7 @@ const cors=require('cors');
 const crypto=require('crypto');
 const dns=require('dns');
 const {Pool}=require('pg');
+try{dns.setDefaultResultOrder('ipv4first')}catch{}
 
 const app=express();
 app.use(express.json({limit:'8mb'}));
@@ -18,8 +19,7 @@ if(!DATABASE_URL) console.warn('DATABASE_URL is not set. Persistent storage is u
 const pool=DATABASE_URL?new Pool({
   connectionString:DATABASE_URL,
   ssl:{rejectUnauthorized:false},
-  max:5,
-  lookup:(hostname,options,callback)=>dns.lookup(hostname,{family:4},callback)
+  max:5
 }):null;
 
 const now=()=>new Date().toISOString();
