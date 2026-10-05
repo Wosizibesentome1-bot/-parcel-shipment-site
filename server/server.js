@@ -4,6 +4,7 @@ const crypto=require('crypto');
 const dns=require('dns');
 const {Pool}=require('pg');
 try{dns.setDefaultResultOrder('ipv4first')}catch{}
+const ipv4Lookup=(hostname,options,callback)=>dns.lookup(hostname,{family:4,all:false},callback);
 
 const app=express();
 app.use(express.json({limit:'8mb'}));
@@ -21,6 +22,7 @@ const pool=DATABASE_URL?new Pool({
   ssl:{rejectUnauthorized:false},
   max:5,
   family:4,
+  lookup:ipv4Lookup,
   connectionTimeoutMillis:10000,
   idleTimeoutMillis:30000
 }):null;
