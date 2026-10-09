@@ -258,8 +258,9 @@ app.post('/api/admin/shipments',async(req,res)=>{
     if(await getShipmentByTracking(tracking))return res.status(409).json({error:'Tracking number already exists'});
     const s={...b,id:crypto.randomUUID(),trackingNumber:tracking,events:Array.isArray(b.events)?b.events:[],createdAt:now()};
     await saveShipment(s);
-    const email=await sendShipmentReceivedEmail(s);
-    res.status(201).json({shipment:s,email});
+    // Return success as soon as the shipment is saved. Email delivery must not keep the admin form stuck on Saving…
+    res.status(201).json({shipment:s,email:{sent:false,queued:true}});
+    void sendShipmentReceivedEmail(s).catch(e=>console.error('Shipment email send failed:',e));
   }catch(e){res.status(500).json({error:'Unable to create shipment'});}
 });
 
