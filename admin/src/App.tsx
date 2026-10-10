@@ -58,10 +58,16 @@ function App(){
   const saveShipment=async(form:any,existing:Shipment|null)=>{
     const trackingNumber=String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase();
     try{
-      if(existing?.id) await api.put('/api/admin/shipments/'+existing.id,{...form,trackingNumber});
-      else await api.post('/api/admin/shipments',{
+      const payload={
         ...form,
         trackingNumber,
+        currentLatitude:form.latitude ?? form.currentLatitude ?? null,
+        currentLongitude:form.longitude ?? form.currentLongitude ?? null,
+        packageDimensions:form.dimensions ?? form.packageDimensions ?? '',
+      };
+      if(existing?.id) await api.put('/api/admin/shipments/'+existing.id,payload);
+      else await api.post('/api/admin/shipments',{
+        ...payload,
         itemDescription:form.itemDescription||form.product||'',
         origin:form.origin||'Parcel Shipment Warehouse',
         destination:form.destination||form.country||'To be confirmed'
@@ -118,6 +124,9 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
   const [form,setForm]=useState<any>(shipment?{
     ...blank,...shipment,
     itemDescription:shipment.itemDescription||'',
+    latitude:shipment.currentLatitude ?? shipment.latitude,
+    longitude:shipment.currentLongitude ?? shipment.longitude,
+    dimensions:shipment.packageDimensions ?? shipment.dimensions ?? '',
     itemImages:shipment.itemImages||[]
   }:{...blank,trackingNumber:generateTrackingNumber()});
   const [saving,setSaving]=useState(false);
