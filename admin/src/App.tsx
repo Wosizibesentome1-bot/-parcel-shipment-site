@@ -57,9 +57,16 @@ function App(){
 
   const saveShipment=async(form:any,existing:Shipment|null)=>{
     const trackingNumber=String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase();
+    const destination=String(form.destination||form.country||existing?.destination||'').trim();
+    const customerName=String(form.customerName||existing?.customerName||'').trim();
+    const itemDescription=String(form.itemDescription||existing?.itemDescription||'').trim();
     try{
       const payload={
         ...form,
+        customerName,
+        itemDescription,
+        country:String(form.country||destination).trim(),
+        destination,
         trackingNumber,
         currentLatitude:form.latitude ?? form.currentLatitude ?? null,
         currentLongitude:form.longitude ?? form.currentLongitude ?? null,
@@ -123,6 +130,9 @@ function App(){
 function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=>void;save:(form:any,existing:Shipment|null)=>Promise<void>;setError:(s:string)=>void}){
   const [form,setForm]=useState<any>(shipment?{
     ...blank,...shipment,
+    customerName:shipment.customerName||'',
+    country:shipment.country||shipment.destination||'',
+    destination:shipment.destination||shipment.country||'',
     itemDescription:shipment.itemDescription||'',
     latitude:shipment.currentLatitude ?? shipment.latitude,
     longitude:shipment.currentLongitude ?? shipment.longitude,
@@ -140,10 +150,13 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     }))).then(added=>set('itemImages',[...(form.itemImages||[]),...added])).catch(()=>setError('Could not read one of the images.')).finally(()=>setImageBusy(false));
   };
   const submit=async()=>{
-    if(!form.customerName||!form.itemDescription||!form.country){
-      setError('Customer name, product and destination country are required.');return;
+    const customerName=String(form.customerName||shipment?.customerName||'').trim();
+    const destination=String(form.destination||form.country||shipment?.destination||'').trim();
+    if(!customerName||!destination||(!shipment&&!String(form.itemDescription||'').trim())){
+      setError(shipment?'Customer name and destination are required.':'Customer name, product and destination country are required.');return;
     }
-    setSaving(true);try{await saveShipment(form,shipment);}finally{setSaving(false);}
+    setError('');
+    setSaving(true);try{await save({...form,customerName,destination,country:String(form.country||destination).trim()},shipment);}finally{setSaving(false);}
   };
   return <div className="modal-backdrop"><div className="modal">
     <div className="modal-head"><div><div className="eyebrow">Private tracking record</div><h2>{shipment?'Edit tracking':'Create tracking number'}</h2></div><button onClick={close}>×</button></div>
