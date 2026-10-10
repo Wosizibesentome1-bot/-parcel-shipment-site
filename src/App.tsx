@@ -56,7 +56,7 @@ export default function App(){
   {view==='support'&&<Support me={me} setError={setError} setNotice={setNotice}/>}
   {view==='admin'&&adminToken&&<Admin shipments={filtered} filter={filter} setFilter={setFilter} refresh={async()=>{const r=await api.get('/api/admin/shipments');setShipments(r.data.shipments||[]);}} edit={s=>setEditor(s)} create={()=>setEditor(null)}/>} {view==='admin'&&!adminToken&&<AdminLogin onLogin={token=>{sessionStorage.setItem('parceltrack_admin_token',token);setAdminToken(token);setError('')}}/>}
   {editor!==false&&view==='admin'&&<Editor shipment={editor} close={()=>setEditor(false)} saved={async()=>{setEditor(false);const r=await api.get('/api/admin/shipments');setShipments(r.data.shipments||[]);setNotice('Tracking record saved.')}} setError={setError}/>}
-  <footer><span>© 2026 Parcel Shipment</span><span>Secure shipment tracking and delivery visibility.</span></footer>{authPage!=='none'&&<AuthPages mode={authPage} close={()=>setAuthPage('none')} setMode={setAuthPage} onAuthenticated={async(token,user)=>{localStorage.setItem('parceltrack_customer_token',token);setMe(user);setAuthPage('none');setView('account');await loadAccount();setNotice('Account ready. You are signed in.')}}/>}
+  <footer><span>© 2026 Parcel Shipment</span><span>Secure shipment tracking and delivery visibility.</span></footer>{authPage!=='none'&&<AuthPages mode={authPage} close={()=>setAuthPage('none')} onAuthenticated={async(token,user)=>{localStorage.setItem('parceltrack_customer_token',token);setMe(user);setAuthPage('none');setView('account');await loadAccount();setNotice('Account ready. You are signed in.')}}/>}
  </div>
 }
 
@@ -89,7 +89,7 @@ function Account({me,shipments,signIn,onTrack,refresh}:{me:Me|null;shipments:Shi
  <div className="page-title account-section-title"><div><div className="eyebrow">Saved shipments</div><h2>My Shipments</h2><p>Your saved tracking numbers appear here automatically.</p></div></div>
  {shipments.length?<div className="shipment-list">{shipments.map(s=><button className="shipment-row" key={s.tracking} onClick={()=>onTrack(s.tracking)}><div className="mini-icon"><Package size={18}/></div><div><strong>{s.product}</strong><span>{s.tracking} · {s.destination}</span></div><Status value={s.status}/><ChevronRight size={17}/></button>)}</div>:<div className="empty"><Package size={38}/><h2>No shipments linked yet</h2><p>Your account does not have a shipment linked to it yet.</p></div>}</section>
 }
-function AuthPages({mode,close,setMode,onAuthenticated}:{mode:'register'|'login';close:()=>void;setMode:(m:'none'|'register'|'login')=>void;onAuthenticated:(token:string,user:Me)=>Promise<void>}){
+function AuthPages({mode,close,onAuthenticated}:{mode:'login';close:()=>void;onAuthenticated:(token:string,user:Me)=>Promise<void>}){
  const [step,setStep]=useState(1); const [busy,setBusy]=useState(false); const [error,setError]=useState('');
  const [form,setForm]=useState<any>({firstName:'',lastName:'',middleName:'',username:'',email:'',phone:'',country:'',address:'',city:'',state:'',postalCode:'',password:'',confirmPassword:'',trackingNumber:'',login:'',loginPassword:''});
  const set=(k:string,v:string)=>setForm((x:any)=>({...x,[k]:v}));
