@@ -214,6 +214,8 @@ function publicShipment(s){
     weight:s.weight,reference:s.reference,currentLocation:s.currentLocation||s.destination,customerEmail:s.customerEmail,
     lastUpdated:s.updatedAt||s.createdAt,
     events:(s.events||[]).map((e,i)=>({title:e.status,location:e.location,time:e.date,done:i<(s.events||[]).length-1||s.status==='Delivered'})),
+    itemImages:Array.isArray(s.itemImages)?s.itemImages:[],
+    deliveryInstructions:s.deliveryInstructions,
     proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined
   };
 }
