@@ -56,17 +56,18 @@ function App(){
   const counts=shipments.reduce((a,s)=>({...a,[s.status]:(a[s.status]||0)+1}),{} as Record<string,number>);
 
   const saveShipment=async(form:any,existing:Shipment|null)=>{
+    const trackingNumber=String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase();
     try{
-      if(existing?.id) await api.put('/api/admin/shipments/'+existing.id,form);
+      if(existing?.id) await api.put('/api/admin/shipments/'+existing.id,{...form,trackingNumber});
       else await api.post('/api/admin/shipments',{
         ...form,
-        trackingNumber:String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase(),
+        trackingNumber,
         itemDescription:form.itemDescription||form.product||'',
         origin:form.origin||'Parcel Shipment Warehouse',
         destination:form.destination||form.country||'To be confirmed'
       });
       setEditor(false); await refresh();
-      if(!existing){setCreatedTracking(String(form.trackingNumber||'').trim().toUpperCase());}
+      if(!existing){setCreatedTracking(trackingNumber);}
       setMessage(existing?'Tracking record updated.':'Tracking record created.');
     }catch(e:any){setError(e?.message||'Could not save shipment.')}
   };
@@ -133,7 +134,7 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     if(!form.customerName||!form.itemDescription||!form.country){
       setError('Customer name, product and destination country are required.');return;
     }
-    setSaving(true);await save(form,shipment);setSaving(false);
+    setSaving(true);try{await saveShipment(form,shipment);}finally{setSaving(false);}
   };
   return <div className="modal-backdrop"><div className="modal">
     <div className="modal-head"><div><div className="eyebrow">Private tracking record</div><h2>{shipment?'Edit tracking':'Create tracking number'}</h2></div><button onClick={close}>×</button></div>
