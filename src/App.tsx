@@ -13,7 +13,7 @@ const request = async (method:string, path:string, body?:any) => {
   return {data};
 };
 const api = {get:(p:string)=>request('GET',p),post:(p:string,b:any)=>request('POST',p,b),put:(p:string,b:any)=>request('PUT',p,b),delete:(p:string)=>request('DELETE',p)};
-const openSupportChat=()=>{const api=(window as any).Tawk_API;if(api?.maximize){api.maximize();return}let tries=0;const timer=window.setInterval(()=>{const t=(window as any).Tawk_API;if(t?.maximize){window.clearInterval(timer);t.maximize()}else if(++tries>=20)window.clearInterval(timer)},250)};
+const openSupportChat=()=>{const crisp=(window as any).$crisp;if(crisp&&typeof crisp.push==='function'){crisp.push(['do','chat:show']);crisp.push(['do','chat:open']);return}window.setTimeout(()=>{const c=(window as any).$crisp;if(c&&typeof c.push==='function'){c.push(['do','chat:show']);c.push(['do','chat:open'])}},700)};
 import { Search, Package, MapPin, Truck, CheckCircle2, Clock3, ShieldCheck, User, LogIn, LogOut, Plus, Pencil, Trash2, Headphones, RefreshCw, Menu, ChevronRight, X, LoaderCircle, Volume2, VolumeX } from 'lucide-react';
 
 type Event = { title:string; location:string; time:string; done?:boolean };
@@ -24,6 +24,7 @@ const STATUSES=['All','Order received','Processing','Picked up','In transit','Ar
 const LANGUAGE_OPTIONS=[['en','English'],['fr','Français'],['es','Español'],['de','Deutsch'],['it','Italiano'],['pt','Português'],['nl','Nederlands'],['sv','Svenska'],['no','Norsk'],['da','Dansk'],['fi','Suomi'],['pl','Polski'],['tr','Türkçe'],['ar','العربية'],['ja','日本語'],['ko','한국어'],['zh-CN','中文'],['hi','हिन्दी']];
 const normalizeAdminShipment=(s:any):Shipment=>({...s,tracking:s.tracking||s.trackingNumber||'',product:s.product||s.itemDescription||'',country:s.country||s.destination||'',events:s.events||[]});
 export default function App(){
+ useEffect(()=>{const w=window as any;w.$crisp=w.$crisp||[];w.CRISP_WEBSITE_ID="5c4d6a20-77d2-40f8-90ad-25b75f47a12d";if(!document.querySelector('script[data-crisp-chat="parcel-shipment"]')){const s=document.createElement('script');s.src='https://client.crisp.chat/l.js';s.async=true;s.dataset.crispChat='parcel-shipment';document.head.appendChild(s)}},[]);
  const [view,setView]=useState<'track'|'account'|'admin'|'support'|'results'>('track'),[tracking,setTracking]=useState(''),[selected,setSelected]=useState<Shipment|null>(null),[shipments,setShipments]=useState<Shipment[]>([]),[me,setMe]=useState<Me|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[loading,setLoading]=useState(false),[buttonLoading,setButtonLoading]=useState(false),[filter,setFilter]=useState('All'),[menu,setMenu]=useState(false),[editor,setEditor]=useState<Shipment|null|false>(false);
  const [language,setLanguage]=useState('en'),[languageOpen,setLanguageOpen]=useState(false),[authPage,setAuthPage]=useState<'none'|'login'|'register'>('none');
  const [adminToken,setAdminToken]=useState(()=>sessionStorage.getItem('parceltrack_admin_token')||'');
