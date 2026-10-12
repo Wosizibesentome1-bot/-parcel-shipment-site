@@ -125,7 +125,7 @@ function App(){
     </main>
     <footer><span>© 2026 Parcel Shipment</span><span>Private shipment administration.</span></footer>
     {editor!==false&&<Editor shipment={editor} close={()=>setEditor(false)} save={saveShipment} setError={setError}/>}
-    {freightNote&&<FreightNote shipment={freightNote} close={()=>setFreightNote(null)}/ >}
+    {freightNote&&<FreightNote shipment={freightNote} close={()=>setFreightNote(null)}/>}
   </div>
 }
 
