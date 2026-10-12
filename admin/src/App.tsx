@@ -43,6 +43,7 @@ function App(){
   const [message,setMessage]=useState('');
   const [createdTracking,setCreatedTracking]=useState('');
   const [error,setError]=useState('');
+  const [freightNote,setFreightNote]=useState<Shipment|null>(null);
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
   useEffect(()=>{void refresh().catch((e:any)=>setError(e?.message||'Could not load shipments.')).finally(()=>setLoading(false))},[]);
@@ -117,13 +118,14 @@ function App(){
           <div><strong>{s.trackingNumber}</strong><span>{s.customerName||'No name'} · {s.itemDescription}</span></div>
           <Status value={s.status}/>
           <div><span>{s.country||s.destination}</span><small>ETA {s.eta||'—'}</small></div>
-          <div className="row-actions"><button title="Edit" onClick={()=>setEditor(s)}>✎</button><button title="Delete" onClick={()=>void remove(s)}>×</button></div>
+          <div className="row-actions"><button title="Generate freight note" className="freight-note-action" onClick={()=>setFreightNote(s)}>FN</button><button title="Edit" onClick={()=>setEditor(s)}>✎</button><button title="Delete" onClick={()=>void remove(s)}>×</button></div>
         </div>)}
         {filtered.length===0&&<div className="empty"><strong>No tracking records found.</strong><p>Create a tracking number to get started.</p></div>}
       </div>
     </main>
     <footer><span>© 2026 Parcel Shipment</span><span>Private shipment administration.</span></footer>
     {editor!==false&&<Editor shipment={editor} close={()=>setEditor(false)} save={saveShipment} setError={setError}/>}
+    {freightNote&&<FreightNote shipment={freightNote} close={()=>setFreightNote(null)}/ >}
   </div>
 }
 
@@ -185,6 +187,28 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     </div>
     <div className="modal-actions"><button className="secondary" onClick={close}>Cancel</button><button className="primary" onClick={()=>void submit()} disabled={saving}>{saving?'Saving…':shipment?'Save changes':'Create tracking'}</button></div>
   </div></div>
+}
+
+function FreightNote({shipment,close}:{shipment:Shipment;close:()=>void}){
+  const issued=new Date().toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+  const noteNumber='FN-'+String(shipment.trackingNumber||shipment.id||'SHIPMENT').replace(/[^a-z0-9]/gi,'').toUpperCase();
+  return <div className="modal-backdrop freight-note-backdrop"><section className="freight-note-card" id="freight-note-print">
+    <div className="freight-note-top"><div><div className="freight-note-brand">PS <span>PARCEL SHIPMENT</span></div><p>FREIGHT NOTE</p></div><div className="freight-note-number"><span>Freight note no.</span><strong>{noteNumber}</strong><span>Issued {issued}</span></div></div>
+    <div className="freight-note-banner">SHIPMENT DETAILS <span>{shipment.status||'Order received'}</span></div>
+    <div className="freight-note-grid"><div><small>SHIPPER / SENDER</small><strong>Parcel Shipment</strong><span>{shipment.origin||'Origin to be confirmed'}</span></div><div><small>CONSIGNEE / RECEIVER</small><strong>{shipment.customerName||'Receiver to be confirmed'}</strong><span>{shipment.customerEmail||'Contact details not provided'}</span><span>{shipment.destination||shipment.country||'Destination to be confirmed'}</span></div></div>
+    <div className="freight-note-section-title">CARGO INFORMATION</div><table className="freight-note-table"><tbody>
+      <tr><th>Tracking number</th><td>{shipment.trackingNumber||'—'}</td><th>Reference</th><td>{shipment.reference||'—'}</td></tr>
+      <tr><th>Description of goods</th><td>{shipment.itemDescription||'—'}</td><th>Quantity</th><td>{shipment.quantity??'—'}</td></tr>
+      <tr><th>Origin</th><td>{shipment.origin||'—'}</td><th>Destination</th><td>{shipment.destination||shipment.country||'—'}</td></tr>
+      <tr><th>Carrier</th><td>{shipment.carrier||'—'}</td><th>Shipping method</th><td>{shipment.shippingMethod||'—'}</td></tr>
+      <tr><th>Weight</th><td>{shipment.weight||'—'}</td><th>Dimensions</th><td>{shipment.dimensions||'—'}</td></tr>
+      <tr><th>Estimated delivery</th><td>{shipment.eta||'To be confirmed'}</td><th>Current location</th><td>{shipment.currentLocation||'—'}</td></tr>
+    </tbody></table>
+    <div className="freight-note-instructions"><strong>Handling / delivery instructions</strong><p>{shipment.deliveryInstructions||'No special instructions provided.'}</p></div>
+    <div className="freight-note-signatures"><div><span>Prepared by</span><i></i><small>Parcel Shipment</small></div><div><span>Received by</span><i></i><small>Name / signature / date</small></div></div>
+    <p className="freight-note-disclaimer">This freight note is a shipment summary generated from the tracking record. It is not a bill of lading, customs declaration, invoice, or proof of payment.</p>
+    <div className="freight-note-actions no-print"><button className="secondary" onClick={close}>Close</button><button className="primary" onClick={()=>window.print()}>Print / Save as PDF</button></div>
+  </section></div>
 }
 
 const Status=({value}:{value:string})=><span className={'status '+value.toLowerCase().replaceAll(' ','-')}>{value}</span>;
