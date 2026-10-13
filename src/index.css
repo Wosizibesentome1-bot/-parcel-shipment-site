@@ -134,3 +134,10 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .neighbor-country-marker{filter:drop-shadow(0 2px 3px rgba(24,70,100,.12))}
 .neighbor-country-label{font-size:10px;font-weight:800;fill:#24516e;stroke:none;paint-order:normal}
 @media(max-width:600px){.neighbor-country-label{font-size:9px}}
+
+/* Earth-inspired ocean, latitude/longitude grid and land contrast */
+.route-map-scene{background:linear-gradient(145deg,#082f50,#0a638d 52%,#041f3c)!important}
+.route-map-scene .world-map-svg{filter:drop-shadow(0 10px 22px rgba(2,25,48,.28))}
+.world-map-grid path{stroke:#d9f5ff!important;stroke-opacity:.22;stroke-width:1!important;stroke-dasharray:3 8!important}
+.route-map-label{fill:#10334a;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.neighbor-country-label{fill:#17415a}
