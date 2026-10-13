@@ -94,53 +94,65 @@ function countryLatLon(place:string):[number,number]{
  if(!found){const entry=Object.entries(COUNTRY_COORDS).sort(([a],[b])=>b.length-a.length).find(([name])=>key.includes(name));found=entry?.[1]}
  return found||[20,0];
 }
-function ensureLeaflet():Promise<any>{
+function ensureGlobe():Promise<any>{
  return new Promise((resolve,reject)=>{
   const w=window as any;
-  if(w.L){resolve(w.L);return}
-  if(!document.querySelector('link[data-parcel-leaflet]')){
-   const link=document.createElement('link');link.rel='stylesheet';link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';link.dataset.parcelLeaflet='true';document.head.appendChild(link);
-  }
-  const existing=document.querySelector('script[data-parcel-leaflet]') as HTMLScriptElement|null;
-  if(existing){existing.addEventListener('load',()=>resolve((window as any).L),{once:true});existing.addEventListener('error',()=>reject(new Error('Map library failed to load')),{once:true});if(w.L)resolve(w.L);return}
-  const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve((window as any).L);script.onerror=()=>reject(new Error('Map library failed to load'));document.head.appendChild(script);
+  if(w.Globe){resolve(w.Globe);return}
+  const existing=document.querySelector('script[data-parcel-globe]') as HTMLScriptElement|null;
+  if(existing){existing.addEventListener('load',()=>resolve((window as any).Globe),{once:true});existing.addEventListener('error',()=>reject(new Error('3D globe library failed to load')),{once:true});if(w.Globe)resolve(w.Globe);return}
+  const script=document.createElement('script');script.src='https://unpkg.com/globe.gl@2.41.12/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
  });
 }
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
- const mapRef=useRef<HTMLDivElement|null>(null);
+ const globeRef=useRef<HTMLDivElement|null>(null);
  const [mapError,setMapError]=useState(false);
  const nearby=nearbyCountryNames(origin,destination);
  const nearbyKey=nearby.join('|');
  useEffect(()=>{
-  let map:any,disposed=false;
+  let globe:any=null,disposed=false,resizeHandler:(()=>void)|null=null;
   setMapError(false);
-  ensureLeaflet().then((L:any)=>{
-   if(disposed||!mapRef.current)return;
+  ensureGlobe().then((Globe:any)=>{
+   if(disposed||!globeRef.current)return;
    const a=countryLatLon(origin),b=countryLatLon(destination);
-   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true,preferCanvas:true,attributionControl:true});
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:18,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
-   const route=L.polyline([a,b],{color:'#0b8ee5',weight:4,opacity:.95,dashArray:'10 8',lineCap:'round'}).addTo(map);
-   L.circleMarker(a,{radius:8,color:'#fff',weight:3,fillColor:'#10a879',fillOpacity:1}).addTo(map).bindTooltip('Origin: '+origin,{direction:'top'});
-   L.circleMarker(b,{radius:8,color:'#fff',weight:3,fillColor:'#f29a28',fillOpacity:1}).addTo(map).bindTooltip('Destination: '+destination,{direction:'top'});
-   const mid:[number,number]=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-   L.marker(mid,{icon:L.divIcon({className:'parcel-map-plane',html:'✈',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map).bindTooltip('Shipment route');
-   nearby.slice(0,8).forEach((name:string)=>{
-    const p=countryLatLon(name);
-    L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:'#1684d7',fillOpacity:1}).addTo(map).bindTooltip(name,{permanent:true,direction:'right',className:'parcel-country-tooltip'});
-   });
-   const bounds=L.latLngBounds([a,b]);
-   nearby.slice(0,8).forEach((name:string)=>bounds.extend(countryLatLon(name)));
-   map.fitBounds(bounds.pad(.22),{maxZoom:4});
-   window.setTimeout(()=>map&&map.invalidateSize(),100);
+   const container=globeRef.current;
+   const route=[{startLat:a[0],startLng:a[1],endLat:b[0],endLng:b[1],color:['#38e0ae','#ffc45c']}];
+   const points=[
+    {lat:a[0],lng:a[1],label:'Origin: '+origin,color:'#38e0ae',size:0.65},
+    {lat:b[0],lng:b[1],label:'Destination: '+destination,color:'#ffc45c',size:0.75}
+   ];
+   const countryLabels=[{lat:a[0],lng:a[1],text:origin,color:'#ffffff',size:0.65},{lat:b[0],lng:b[1],text:destination,color:'#ffffff',size:0.65}];
+   nearby.slice(0,8).forEach((name:string)=>{const p=countryLatLon(name);countryLabels.push({lat:p[0],lng:p[1],text:name,color:'#cce8ff',size:0.42} as any)});
+   globe=Globe()(container)
+    .width(Math.max(container.clientWidth,300))
+    .height(Math.max(container.clientHeight,260))
+    .globeImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/earth-blue-marble.jpg')
+    .bumpImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/earth-topology.png')
+    .backgroundImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/night-sky.png')
+    .backgroundColor('#061426')
+    .showAtmosphere(true)
+    .atmosphereColor('#57b9ff')
+    .atmosphereAltitude(0.16)
+    .arcsData(route)
+    .arcStartLat('startLat').arcStartLng('startLng').arcEndLat('endLat').arcEndLng('endLng')
+    .arcColor('color').arcStroke(0.65).arcDashLength(0.45).arcDashGap(0.22).arcDashInitialGap(()=>Math.random()).arcDashAnimateTime(1800)
+    .pointsData(points).pointLat('lat').pointLng('lng').pointColor('color').pointAltitude(0.025).pointRadius('size').pointLabel('label')
+    .labelsData(countryLabels).labelLat('lat').labelLng('lng').labelText('text').labelColor('color').labelSize('size').labelDotRadius(0.22).labelAltitude(0.025)
+    .ringsData(points).ringLat('lat').ringLng('lng').ringColor((d:any)=>()=>d.color).ringMaxRadius(3.5).ringPropagationSpeed(2).ringRepeatPeriod(950);
+   if(globe.controls){globe.controls().autoRotate=true;globe.controls().autoRotateSpeed=0.45;globe.controls().enableZoom=true}
+   const controls=globe.controls?.();
+   if(controls){controls.autoRotate=true;controls.autoRotateSpeed=0.38;controls.minDistance=130;controls.maxDistance=450}
+   globe.pointOfView({lat:(a[0]+b[0])/2,lng:(a[1]+b[1])/2,altitude:2.05},900);
+   resizeHandler=()=>{if(globe&&container){globe.width(Math.max(container.clientWidth,300)).height(Math.max(container.clientHeight,260))}};
+   window.addEventListener('resize',resizeHandler);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(map){map.remove();map=null}};
+  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(globe&&typeof globe._destructor==='function')globe._destructor();if(globeRef.current)globeRef.current.innerHTML=''};
  },[origin,destination,nearbyKey]);
- return <div className="shipment-globe-card route-overview-card">
-  <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>Shipment route overview</h3><p>Explore the route across a real-world map with nearby countries labelled.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
-  <div className="globe-scene route-map-scene">
-   <div ref={mapRef} className="live-earth-map" role="img" aria-label={`Geographic shipment route from ${origin} to ${destination}`}/>
-   {mapError&&<div className="live-map-fallback">The live map could not load. Please check your internet connection and refresh.</div>}
-   <div className="globe-note route-map-note">Geographic map · route is illustrative, not live GPS</div>
+ return <div className="shipment-globe-card route-overview-card globe3d-card">
+  <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>3D Earth route overview</h3><p>Explore the journey on a realistic Earth globe. Drag to rotate and use the controls to zoom.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-scene route-map-scene globe3d-scene">
+   <div ref={globeRef} className="live-earth-globe" role="img" aria-label={`3D Earth globe showing shipment route from ${origin} to ${destination}`}/>
+   {mapError&&<div className="live-map-fallback">The 3D Earth view could not load. Please check your internet connection and refresh.</div>}
+   <div className="globe-note route-map-note">Illustrative country-to-country route · not live GPS</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
   <div className="route-summary">
