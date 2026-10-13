@@ -109,6 +109,9 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
      <path d="M292 66 L304 55 320 62 315 78 301 84Z"/>
      <path d="M756 94 L777 86 793 98 787 115 768 119Z"/>
     </g>
+    <g className="neighbor-country-markers" aria-label="Nearby countries on the map">
+     {nearby.map((name,index)=>{const p=countryPoint(name);const label=name.length>17?name.slice(0,15)+'…':name;const labelX=Math.max(52,Math.min(848,p.x));const labelY=Math.max(18,Math.min(302,p.y+22+(index%2)*12));return <g key={name} className="neighbor-country-marker" transform={`translate(${p.x} ${p.y})`}><circle r="10" fill="#1684d7" fillOpacity=".13"/><circle r="4.5" fill="#1684d7" stroke="#fff" strokeWidth="2"/><g transform={`translate(${labelX-p.x} ${labelY-p.y})`}><rect x={-Math.min(82,label.length*3.2+10)} y="-9" width={Math.min(164,label.length*6.4+20)} height="18" rx="9" fill="#fff" stroke="#9cc8e5" strokeWidth="1"/><text x="0" y="3.5" textAnchor="middle" className="neighbor-country-label">{label}</text></g></g>})}
+    </g>
     <path d={route} fill="none" stroke="#6baee0" strokeWidth="10" strokeOpacity=".17" filter="url(#routeSoftGlow)"/>
     <path d={route} fill="none" stroke="#1684d7" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="8 7" className="globe-route-line"/>
     <g transform={`translate(${a.x} ${a.y})`}><circle r="17" fill="#13a879" fillOpacity=".14"/><circle r="8" fill="#13a879" stroke="#fff" strokeWidth="3"/><text x="0" y="-19" textAnchor="middle" className="globe-label route-map-label">{origin.length>24?origin.slice(0,22)+'…':origin}</text></g>
