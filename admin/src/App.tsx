@@ -207,7 +207,7 @@ function FreightNote({shipment,close}:{shipment:Shipment;close:()=>void}){
     <div className="freight-note-instructions"><strong>Handling / delivery instructions</strong><p>{shipment.deliveryInstructions||'No special instructions provided.'}</p></div>
     <div className="freight-note-signatures"><div><span>Prepared by</span><i></i><small>Parcel Shipment</small></div><div><span>Received by</span><i></i><small>Name / signature / date</small></div></div>
     <p className="freight-note-disclaimer">This freight note is a shipment summary generated from the tracking record. It is not a bill of lading, customs declaration, invoice, or proof of payment.</p>
-    <div className="freight-note-actions no-print"><button className="secondary" onClick={()=>{close();window.location.href="https://parcel-shipment-public.onrender.com"}}>← Back to tracking website</button><button className="secondary" onClick={close}>Close</button><button className="primary" onClick={()=>window.print()}>Print / Save as PDF</button></div>
+    <div className="freight-note-actions no-print"><button className="secondary" onClick={()=>{close();window.location.href="https://parcel-shipment-public.onrender.com"}}>← Back to Tracking Page</button><button className="secondary" onClick={close}>Close</button><button className="primary" onClick={()=>window.print()}>Print / Save as PDF</button></div>
   </section></div>
 }
 
