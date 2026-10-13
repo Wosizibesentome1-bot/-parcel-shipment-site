@@ -88,39 +88,62 @@ const COUNTRY_NEIGHBORS:Record<string,string[]> = {
 };
 function resolveCountry(place:string){const key=(place||'').toLowerCase().replace(/\s+/g,' ').trim();return Object.keys(COUNTRY_COORDS).sort((a,b)=>b.length-a.length).find(name=>key===name||key.includes(name))||key;}
 function nearbyCountryNames(origin:string,destination:string){const originKey=resolveCountry(origin),destinationKey=resolveCountry(destination);const excluded=[originKey,destinationKey,origin.toLowerCase(),destination.toLowerCase()];const names=[...(COUNTRY_NEIGHBORS[originKey]||[]),...(COUNTRY_NEIGHBORS[destinationKey]||[])];return [...new Set(names)].filter(name=>!excluded.some(key=>key&&name.toLowerCase()===key)).slice(0,10);}
+function countryLatLon(place:string):[number,number]{
+ const key=(place||'').toLowerCase().replace(/\\s+/g,' ').trim();
+ let found=COUNTRY_COORDS[key];
+ if(!found){const entry=Object.entries(COUNTRY_COORDS).sort(([a],[b])=>b.length-a.length).find(([name])=>key.includes(name));found=entry?.[1]}
+ return found||[20,0];
+}
+function ensureLeaflet():Promise<any>{
+ return new Promise((resolve,reject)=>{
+  const w=window as any;
+  if(w.L){resolve(w.L);return}
+  if(!document.querySelector('link[data-parcel-leaflet]')){
+   const link=document.createElement('link');link.rel='stylesheet';link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';link.dataset.parcelLeaflet='true';document.head.appendChild(link);
+  }
+  const existing=document.querySelector('script[data-parcel-leaflet]') as HTMLScriptElement|null;
+  if(existing){existing.addEventListener('load',()=>resolve((window as any).L),{once:true});existing.addEventListener('error',()=>reject(new Error('Map library failed to load')),{once:true});if(w.L)resolve(w.L);return}
+  const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve((window as any).L);script.onerror=()=>reject(new Error('Map library failed to load'));document.head.appendChild(script);
+ });
+}
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
- const a=countryPoint(origin),b=countryPoint(destination),midX=(a.x+b.x)/2,midY=Math.max(28,Math.min(a.y,b.y)-Math.max(38,Math.abs(a.x-b.x)*.16)),nearby=nearbyCountryNames(origin,destination);
- const route=`M ${a.x} ${a.y} Q ${midX} ${midY} ${b.x} ${b.y}`;
+ const mapRef=useRef<HTMLDivElement|null>(null);
+ const [mapError,setMapError]=useState(false);
+ const nearby=nearbyCountryNames(origin,destination);
+ const nearbyKey=nearby.join('|');
+ useEffect(()=>{
+  let map:any,disposed=false;
+  setMapError(false);
+  ensureLeaflet().then((L:any)=>{
+   if(disposed||!mapRef.current)return;
+   const a=countryLatLon(origin),b=countryLatLon(destination);
+   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true,preferCanvas:true,attributionControl:true});
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/terrain/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:18,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
+   const route=L.polyline([a,b],{color:'#0b8ee5',weight:4,opacity:.95,dashArray:'10 8',lineCap:'round'}).addTo(map);
+   L.circleMarker(a,{radius:8,color:'#fff',weight:3,fillColor:'#10a879',fillOpacity:1}).addTo(map).bindTooltip('Origin: '+origin,{direction:'top'});
+   L.circleMarker(b,{radius:8,color:'#fff',weight:3,fillColor:'#f29a28',fillOpacity:1}).addTo(map).bindTooltip('Destination: '+destination,{direction:'top'});
+   const mid:[number,number]=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+   L.marker(mid,{icon:L.divIcon({className:'parcel-map-plane',html:'✈',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(map).bindTooltip('Shipment route');
+   nearby.slice(0,8).forEach((name:string)=>{
+    const p=countryLatLon(name);
+    L.circleMarker(p,{radius:5,color:'#fff',weight:2,fillColor:'#1684d7',fillOpacity:1}).addTo(map).bindTooltip(name,{permanent:true,direction:'right',className:'parcel-country-tooltip'});
+   });
+   const bounds=L.latLngBounds([a,b]);
+   nearby.slice(0,8).forEach((name:string)=>bounds.extend(countryLatLon(name)));
+   map.fitBounds(bounds.pad(.22),{maxZoom:4});
+   window.setTimeout(()=>map&&map.invalidateSize(),100);
+  }).catch(()=>{if(!disposed)setMapError(true)});
+  return ()=>{disposed=true;if(map){map.remove();map=null}};
+ },[origin,destination,nearbyKey]);
  return <div className="shipment-globe-card route-overview-card">
-  <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>Shipment route overview</h3><p>Explore the route and nearby countries around the shipment corridor.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>Shipment route overview</h3><p>Explore the route across a real-world map with nearby countries labelled.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene">
-   <svg className="globe-svg world-map-svg" viewBox="0 0 900 320" role="img" aria-label={`Illustrative route from ${origin} to ${destination}`}>
-    <defs><linearGradient id="routeOcean" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0%" stopColor="#0b4268"/><stop offset="48%" stopColor="#087bb0"/><stop offset="100%" stopColor="#07345b"/></linearGradient><radialGradient id="routeOceanGlow" cx="48%" cy="42%" r="70%"><stop offset="0%" stopColor="#39a6d2" stopOpacity=".55"/><stop offset="100%" stopColor="#031f43" stopOpacity=".2"/></radialGradient><linearGradient id="routeLand" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a8d99b"/><stop offset="48%" stopColor="#63b87e"/><stop offset="100%" stopColor="#287b65"/></linearGradient><filter id="routeSoftGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect x="0" y="0" width="900" height="320" rx="12" fill="url(#routeOcean)"/><rect x="0" y="0" width="900" height="320" rx="12" fill="url(#routeOceanGlow)"/>
-    <g className="world-map-grid">{[100,200,300,400,500,600,700,800].map(x=><path key={'v'+x} d={`M ${x} 0 V320`}/>)}{[60,120,180,240,300].map(y=><path key={'h'+y} d={`M0 ${y} H900`}/>)}</g>
-    <g fill="url(#routeLand)" stroke="#d2f1b7" strokeOpacity=".8" strokeWidth="1.4" strokeLinejoin="round" filter="url(#routeSoftGlow)">
-     <path d="M66 70 L99 43 145 35 177 50 211 52 241 72 232 94 205 104 191 128 164 132 150 157 126 145 111 119 87 111 74 91Z"/>
-     <path d="M187 151 L216 155 239 178 236 205 221 231 213 262 194 285 181 258 174 230 161 206 164 177Z"/>
-     <path d="M350 67 L374 51 402 55 420 71 449 72 467 88 451 105 429 106 417 124 392 121 378 105 357 99Z"/>
-     <path d="M394 132 L425 120 448 138 452 166 438 194 423 225 406 247 391 220 384 193 371 165 377 145Z"/>
-     <path d="M463 72 L495 47 544 40 587 51 628 66 668 83 696 103 685 125 654 130 631 145 605 139 584 157 557 144 539 123 512 119 491 103 471 99Z"/>
-     <path d="M582 157 L610 151 633 171 630 200 612 226 594 215 583 187Z"/>
-     <path d="M689 229 L716 218 742 236 738 258 714 274 692 256Z"/>
-     <path d="M292 66 L304 55 320 62 315 78 301 84Z"/>
-     <path d="M756 94 L777 86 793 98 787 115 768 119Z"/>
-    </g>
-    <g className="neighbor-country-markers" aria-label="Nearby countries on the map">
-     {nearby.map((name,index)=>{const p=countryPoint(name);const label=name.length>17?name.slice(0,15)+'…':name;const labelX=Math.max(52,Math.min(848,p.x));const labelY=Math.max(18,Math.min(302,p.y+22+(index%2)*12));return <g key={name} className="neighbor-country-marker" transform={`translate(${p.x} ${p.y})`}><circle r="10" fill="#1684d7" fillOpacity=".13"/><circle r="4.5" fill="#1684d7" stroke="#fff" strokeWidth="2"/><g transform={`translate(${labelX-p.x} ${labelY-p.y})`}><rect x={-Math.min(82,label.length*3.2+10)} y="-9" width={Math.min(164,label.length*6.4+20)} height="18" rx="9" fill="#fff" stroke="#9cc8e5" strokeWidth="1"/><text x="0" y="3.5" textAnchor="middle" className="neighbor-country-label">{label}</text></g></g>})}
-    </g>
-    <path d={route} fill="none" stroke="#6baee0" strokeWidth="10" strokeOpacity=".17" filter="url(#routeSoftGlow)"/>
-    <path d={route} fill="none" stroke="#1684d7" strokeWidth="3.5" strokeLinecap="round" strokeDasharray="8 7" className="globe-route-line"/>
-    <g transform={`translate(${a.x} ${a.y})`}><circle r="17" fill="#13a879" fillOpacity=".14"/><circle r="8" fill="#13a879" stroke="#fff" strokeWidth="3"/><text x="0" y="-19" textAnchor="middle" className="globe-label route-map-label">{origin.length>24?origin.slice(0,22)+'…':origin}</text></g>
-    <g transform={`translate(${b.x} ${b.y})`}><circle r="17" fill="#e89a2b" fillOpacity=".17"/><circle r="8" fill="#e89a2b" stroke="#fff" strokeWidth="3"/><text x="0" y="-19" textAnchor="middle" className="globe-label route-map-label">{destination.length>24?destination.slice(0,22)+'…':destination}</text></g>
-    <g className="globe-plane" transform={`translate(${midX} ${midY})`}><circle r="14" fill="#fff" stroke="#1684d7" strokeWidth="1.5"/><path d="M-8 2 L-1 -1 L2 -9 L5 -9 L4 -1 L10 2 L10 4 L3 3 L1 8 L-1 8 L-1 3 L-8 4Z" fill="#1678bd"/></g>
-   </svg>
-   <div className="globe-note route-map-note">Illustrative route · not live GPS</div>
+   <div ref={mapRef} className="live-earth-map" role="img" aria-label={`Geographic shipment route from ${origin} to ${destination}`}/>
+   {mapError&&<div className="live-map-fallback">The live map could not load. Please check your internet connection and refresh.</div>}
+   <div className="globe-note route-map-note">Geographic map · route is illustrative, not live GPS</div>
   </div>
-  <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>\n  <div className="route-summary">
+  <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
+  <div className="route-summary">
    <div className="route-summary-point"><span className="route-summary-marker route-origin-marker"><MapPin size={17}/></span><span><small>ORIGIN</small><b>{origin}</b></span></div>
    <div className="route-summary-middle"><span className="route-summary-line"/><span className="route-summary-arrow">›</span><small>SHIPMENT ROUTE</small></div>
    <div className="route-summary-point route-summary-destination"><span className="route-summary-marker route-destination-marker"><MapPin size={17}/></span><span><small>DESTINATION</small><b>{destination}</b></span></div>
@@ -128,7 +151,6 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   <div className="route-latest-update"><span className="route-update-icon"><Package size={17}/></span><span><small>LATEST SHIPMENT UPDATE</small><b>{current}</b></span><span className="route-update-status">{status||'In transit'}</span></div>
  </div>
 }
-
 function HomeLongForm(){return <section className="content long-home"><div className="shipment-info-section"><div><span className="eyebrow">Delivery visibility</span><h2>Everything important, without the clutter.</h2><p>Parcel Shipment keeps the practical details together: current status, route, estimated delivery, location, shipment history and delivery information.</p></div><div className="info-points"><div><strong>01 · Current status</strong><span>See whether a shipment is received, processing, moving, out for delivery or delivered.</span></div><div><strong>02 · Route visibility</strong><span>View origin, destination and current location when those details are available.</span></div><div><strong>03 · Shipment history</strong><span>Follow important events in order and understand what happened at each stage.</span></div></div></div><div className="shipment-photo-band"><img src="https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1600&q=85" alt="Cardboard parcels prepared for shipment"/><div><span className="eyebrow">Shipment journey</span><h2>From pickup to the final delivery.</h2><p>Tracking is more useful when the journey is easy to follow. Check where a parcel started, where it is now and what happens next.</p></div></div><div className="delivery-gallery"><div className="gallery-head"><span className="eyebrow">Shipment network</span><h2>See the journey behind every parcel.</h2><p>Delivery-focused visuals for the stages a shipment can pass through.</p></div><div className="gallery-grid"><div className="gallery-card gallery-wide"><img src="https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1400&q=85" alt="Packages inside a logistics warehouse"/><span>Warehouse sorting and handling</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&q=85" alt="Packages moving through a warehouse"/><span>Packages moving through the network</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1616401784845-180882ba9ba8?auto=format&fit=crop&w=900&q=85" alt="Delivery vehicle on the road"/><span>Transportation between locations</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1605733160314-4fc7dac4bb16?auto=format&fit=crop&w=900&q=85" alt="Parcel boxes ready for delivery"/><span>Final-mile delivery preparation</span></div></div></div><div className="tracking-essentials"><div className="section-heading"><span className="eyebrow">Tracking essentials</span><h2>What you can check for a shipment.</h2><p>The tracking page is designed around the information customers normally need while a parcel is moving.</p></div><div className="essentials-grid"><div><MapPin/><h3>Current location</h3><p>See the latest available location and map position when coordinates have been provided.</p></div><div><Truck/><h3>Route and movement</h3><p>Review origin, destination, shipping method and the latest movement update.</p></div><div><Clock3/><h3>Estimated delivery</h3><p>Keep the expected delivery date visible alongside the current shipment status.</p></div><div><Package/><h3>Package details</h3><p>View the item description, weight, dimensions and reference information when available.</p></div><div><CheckCircle2/><h3>Shipment history</h3><p>Read the timeline of completed and upcoming shipment events in order.</p></div><div><ShieldCheck/><h3>Delivery information</h3><p>Check delivery instructions, documents and proof of delivery when provided.</p></div></div></div><div className="status-guide"><div className="section-heading"><span className="eyebrow">Status guide</span><h2>Know what each tracking update means.</h2></div><div className="status-guide-grid"><div><b>Order received</b><span>Your shipment record has been created and received.</span></div><div><b>Processing</b><span>The parcel is being prepared for its next movement.</span></div><div><b>In transit</b><span>The shipment is moving between locations.</span></div><div><b>Arrived at facility</b><span>The parcel has reached a processing facility.</span></div><div><b>Out for delivery</b><span>The parcel is in the delivery stage and may arrive soon.</span></div><div><b>Delivered</b><span>The shipment has been marked as delivered.</span></div></div></div><div className="delivery-advice"><div><span className="eyebrow">Before delivery</span><h2>Keep your tracking number handy.</h2><p>Use the same tracking number to return to the latest shipment information. If a delivery exception, address issue or customs hold appears, review the latest event and contact support when needed.</p></div><img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1100&q=85" alt="Delivery van carrying parcels"/></div><div className="how-section"><div className="how-head"><span className="eyebrow">How it works</span><h2>Track a shipment in three steps.</h2></div><div className="how-grid"><div><b>01</b><h3>Enter your number</h3><p>Use the tracking number supplied for your shipment.</p></div><div><b>02</b><h3>Check the latest update</h3><p>Review status, location, estimated delivery and recent events.</p></div><div><b>03</b><h3>Follow the journey</h3><p>Return to the same tracking number whenever you need an update.</p></div></div></div></section>}
 
 function LanguageSwitcher(p:{language:string;setLanguage:(x:string)=>void;open:boolean;setOpen:(x:boolean)=>void}){const current=LANGUAGE_OPTIONS.find(x=>x[0]===p.language)?.[1]||'English';const change=(code:string)=>{p.setLanguage(code);p.setOpen(false);document.documentElement.lang=code;const select=document.querySelector('.goog-te-combo') as HTMLSelectElement|null;if(select){select.value=code;select.dispatchEvent(new Event('change'))}};return <div className="language-switcher"><button className="language-button" onClick={()=>p.setOpen(!p.open)} aria-label="Change website language" aria-expanded={p.open}>🌐 <span>Change language</span><ChevronRight size={15} className={p.open?'language-chevron-open':''}/></button>{p.open&&<div className="language-menu"><div className="language-menu-title">Select website language</div>{LANGUAGE_OPTIONS.map(([code,name])=><button key={code} className={p.language===code?'selected-language':''} onClick={()=>change(code)}><span>{name}</span>{p.language===code&&<CheckCircle2 size={14}/>}</button>)}</div>}<div id="google_translate_element" className="google-translate-hidden"/></div>}
