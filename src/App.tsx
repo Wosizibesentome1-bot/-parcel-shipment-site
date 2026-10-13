@@ -118,7 +118,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    if(disposed||!mapRef.current)return;
    const a=countryLatLon(origin),b=countryLatLon(destination);
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true,preferCanvas:true,attributionControl:true});
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/terrain/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:18,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:18,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(map);
    const route=L.polyline([a,b],{color:'#0b8ee5',weight:4,opacity:.95,dashArray:'10 8',lineCap:'round'}).addTo(map);
    L.circleMarker(a,{radius:8,color:'#fff',weight:3,fillColor:'#10a879',fillOpacity:1}).addTo(map).bindTooltip('Origin: '+origin,{direction:'top'});
    L.circleMarker(b,{radius:8,color:'#fff',weight:3,fillColor:'#f29a28',fillOpacity:1}).addTo(map).bindTooltip('Destination: '+destination,{direction:'top'});
