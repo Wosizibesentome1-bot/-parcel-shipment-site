@@ -141,3 +141,15 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .world-map-grid path{stroke:#d9f5ff!important;stroke-opacity:.22;stroke-width:1!important;stroke-dasharray:3 8!important}
 .route-map-label{fill:#10334a;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
 .neighbor-country-label{fill:#17415a}
+
+/* Real geographic Earth map for shipment routes */
+.route-map-scene{position:relative!important;background:linear-gradient(145deg,#082f50,#0a638d 52%,#041f3c)!important;padding:12px!important}
+.live-earth-map{width:100%;height:clamp(270px,38vw,390px);min-height:270px;border-radius:14px;overflow:hidden;background:#0a638d;isolation:isolate}
+.live-earth-map .leaflet-control-attribution{font-size:9px}
+.live-earth-map .leaflet-control-zoom a{color:#123c55}
+.parcel-map-plane{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#fff;border:2px solid #1684d7;box-shadow:0 3px 14px rgba(0,35,70,.25);color:#0878bd;font-size:19px;font-weight:800}
+.parcel-country-tooltip{border:1px solid #b8d9e9!important;border-radius:6px!important;color:#16415a!important;background:#fff!important;font-size:11px!important;font-weight:700!important;box-shadow:0 2px 8px rgba(0,30,60,.14)!important;padding:3px 7px!important}
+.parcel-country-tooltip:before{display:none!important}
+.live-map-fallback{padding:18px;text-align:center;background:#fff;color:#7b4d13;border-radius:10px;font-size:13px}
+.route-map-note{z-index:500;pointer-events:none}
+@media(max-width:600px){.route-map-scene{padding:7px!important}.live-earth-map{height:280px;min-height:250px}.live-earth-map .leaflet-control-attribution{font-size:8px}}
