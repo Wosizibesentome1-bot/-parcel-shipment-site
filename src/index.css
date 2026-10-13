@@ -110,3 +110,21 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .route-latest-update b{font-size:13px;color:#1b344b;margin-top:4px;overflow-wrap:anywhere}
 .route-update-status{font-size:11px;font-weight:800;color:#167b55;background:#e8f7f0;padding:7px 10px;border-radius:8px;white-space:nowrap}
 @media(max-width:600px){.route-overview-card .globe-heading{padding:18px 16px;gap:10px}.route-overview-card .globe-heading h3{font-size:19px}.route-map-scene{padding:8px 3px 12px}.route-map-label{font-size:10px}.route-summary{grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:8px;padding:15px 12px}.route-summary-marker{width:31px;height:31px;flex-basis:31px;border-radius:9px}.route-summary-point{gap:7px}.route-summary-point b{font-size:11px}.route-summary-middle small{font-size:7px;letter-spacing:.03em}.route-latest-update{padding:14px 12px;gap:9px}.route-update-status{font-size:9px;padding:6px 7px}.route-latest-update b{font-size:12px}}
+
+/* Modern route map and regional country context */
+.route-overview-card{border-color:#d8e5ef;border-radius:20px;box-shadow:0 16px 42px rgba(20,53,79,.09)}
+.route-overview-card .globe-heading{background:linear-gradient(115deg,#fff 0%,#f7fbff 100%)}
+.route-map-scene{background:radial-gradient(ellipse at 50% 40%,#fff 0%,#edf6fc 75%);padding:12px 14px 14px}
+.route-map-scene .world-map-svg{filter:drop-shadow(0 8px 16px rgba(31,75,105,.08))}
+.world-map-grid path{stroke:#d0e1ed;stroke-width:1;stroke-dasharray:2 7}
+.route-map-label{font-size:13px;stroke-width:5px}
+.nearby-countries{padding:17px 24px 19px;background:linear-gradient(180deg,#fbfdff,#f4f9fd);border-bottom:1px solid #e8eff5}
+.nearby-countries-heading{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.nearby-country-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:#e3f2fc;color:#1677b5}
+.nearby-countries-heading strong,.nearby-countries-heading small{display:block}
+.nearby-countries-heading strong{font-size:13px;color:#19364e}
+.nearby-countries-heading small{font-size:11px;color:#778b9d;margin-top:3px;line-height:1.4}
+.nearby-country-chips{display:flex;flex-wrap:wrap;gap:8px}
+.nearby-country-chip{display:inline-flex;align-items:center;border:1px solid #d6e6f1;background:#fff;color:#2a526d;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:700;box-shadow:0 2px 4px rgba(24,57,84,.03)}
+.nearby-country-empty{font-size:12px;color:#73879a}
+@media(max-width:600px){.nearby-countries{padding:15px 14px}.nearby-country-chips{gap:6px}.nearby-country-chip{font-size:10px;padding:6px 9px}.nearby-countries-heading small{font-size:10px}.route-map-scene{padding:8px 4px 12px}}
