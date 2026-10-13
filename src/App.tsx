@@ -95,10 +95,10 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>Shipment route overview</h3><p>Explore the route and nearby countries around the shipment corridor.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene">
    <svg className="globe-svg world-map-svg" viewBox="0 0 900 320" role="img" aria-label={`Illustrative route from ${origin} to ${destination}`}>
-    <defs><linearGradient id="routeLand" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#d7e8f0"/><stop offset="100%" stopColor="#bfd6e4"/></linearGradient><filter id="routeSoftGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-    <rect x="0" y="0" width="900" height="320" rx="12" fill="#f3f8fc"/>
+    <defs><linearGradient id="routeOcean" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0%" stopColor="#0b4268"/><stop offset="48%" stopColor="#087bb0"/><stop offset="100%" stopColor="#07345b"/></linearGradient><radialGradient id="routeOceanGlow" cx="48%" cy="42%" r="70%"><stop offset="0%" stopColor="#39a6d2" stopOpacity=".55"/><stop offset="100%" stopColor="#031f43" stopOpacity=".2"/></radialGradient><linearGradient id="routeLand" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#a8d99b"/><stop offset="48%" stopColor="#63b87e"/><stop offset="100%" stopColor="#287b65"/></linearGradient><filter id="routeSoftGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <rect x="0" y="0" width="900" height="320" rx="12" fill="url(#routeOcean)"/><rect x="0" y="0" width="900" height="320" rx="12" fill="url(#routeOceanGlow)"/>
     <g className="world-map-grid">{[100,200,300,400,500,600,700,800].map(x=><path key={'v'+x} d={`M ${x} 0 V320`}/>)}{[60,120,180,240,300].map(y=><path key={'h'+y} d={`M0 ${y} H900`}/>)}</g>
-    <g fill="url(#routeLand)" stroke="#a9c7d8" strokeWidth="1.2" strokeLinejoin="round">
+    <g fill="url(#routeLand)" stroke="#d2f1b7" strokeOpacity=".8" strokeWidth="1.4" strokeLinejoin="round" filter="url(#routeSoftGlow)">
      <path d="M66 70 L99 43 145 35 177 50 211 52 241 72 232 94 205 104 191 128 164 132 150 157 126 145 111 119 87 111 74 91Z"/>
      <path d="M187 151 L216 155 239 178 236 205 221 231 213 262 194 285 181 258 174 230 161 206 164 177Z"/>
      <path d="M350 67 L374 51 402 55 420 71 449 72 467 88 451 105 429 106 417 124 392 121 378 105 357 99Z"/>
