@@ -153,3 +153,14 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .live-map-fallback{padding:18px;text-align:center;background:#fff;color:#7b4d13;border-radius:10px;font-size:13px}
 .route-map-note{z-index:500;pointer-events:none}
 @media(max-width:600px){.route-map-scene{padding:7px!important}.live-earth-map{height:280px;min-height:250px}.live-earth-map .leaflet-control-attribution{font-size:8px}}
+
+
+/* Realistic interactive 3D Earth globe for shipment route visualization */
+.globe3d-card .globe-heading{background:linear-gradient(120deg,#fff,#f2f8ff)}
+.globe3d-scene{position:relative!important;display:block!important;padding:0!important;min-height:0!important;background:radial-gradient(ellipse at center,#123b61 0%,#061426 75%)!important;overflow:hidden}
+.live-earth-globe{width:100%;height:clamp(310px,48vw,470px);min-height:300px;overflow:hidden;cursor:grab;touch-action:pan-y}
+.live-earth-globe:active{cursor:grabbing}
+.live-earth-globe canvas{display:block;max-width:100%;outline:none}
+.globe3d-scene .route-map-note{position:absolute;right:12px;bottom:10px;z-index:5;pointer-events:none;padding:6px 9px;border:1px solid #ffffff24;border-radius:7px;background:#07182bc9;color:#d2e6f5;font-size:9px}
+.globe3d-scene .live-map-fallback{position:absolute;inset:20px;z-index:6;display:grid;place-items:center}
+@media(max-width:600px){.live-earth-globe{height:310px;min-height:280px}.globe3d-scene .route-map-note{right:7px;bottom:7px;font-size:8px}}
