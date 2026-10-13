@@ -100,7 +100,7 @@ function ensureGlobe():Promise<any>{
   if(w.Globe){resolve(w.Globe);return}
   const existing=document.querySelector('script[data-parcel-globe]') as HTMLScriptElement|null;
   if(existing){existing.addEventListener('load',()=>resolve((window as any).Globe),{once:true});existing.addEventListener('error',()=>reject(new Error('3D globe library failed to load')),{once:true});if(w.Globe)resolve(w.Globe);return}
-  const script=document.createElement('script');script.src='https://unpkg.com/globe.gl@2.41.12/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
+  const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/globe.gl@2.41.12/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
  });
 }
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
@@ -125,9 +125,9 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    globe=Globe()(container)
     .width(Math.max(container.clientWidth,300))
     .height(Math.max(container.clientHeight,260))
-    .globeImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/earth-blue-marble.jpg')
-    .bumpImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/earth-topology.png')
-    .backgroundImageUrl('https://unpkg.com/three-globe@2.41.12/example/img/night-sky.png')
+    .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/earth-blue-marble.jpg')
+    .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/earth-topology.png')
+    .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/night-sky.png')
     .backgroundColor('#061426')
     .showAtmosphere(true)
     .atmosphereColor('#57b9ff')
@@ -151,7 +151,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>3D Earth route overview</h3><p>Explore the journey on a realistic Earth globe. Drag to rotate and use the controls to zoom.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene globe3d-scene">
    <div ref={globeRef} className="live-earth-globe" role="img" aria-label={`3D Earth globe showing shipment route from ${origin} to ${destination}`}/>
-   {mapError&&<div className="live-map-fallback">The 3D Earth view could not load. Please check your internet connection and refresh.</div>}
+   {mapError&&<div className="live-map-fallback">The 3D Earth view could not initialize in this browser. Refresh the page or try opening the site in Safari or Chrome.</div>}
    <div className="globe-note route-map-note">Illustrative country-to-country route · not live GPS</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
