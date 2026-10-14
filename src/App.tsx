@@ -120,7 +120,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     {lat:a[0],lng:a[1],label:'Origin: '+origin,color:'#38e0ae',size:0.65},
     {lat:b[0],lng:b[1],label:'Destination: '+destination,color:'#ffc45c',size:0.75}
    ];
-   const countryLabels=[{lat:a[0],lng:a[1],text:origin,color:'#ffffff',size:0.65},{lat:b[0],lng:b[1],text:destination,color:'#ffffff',size:0.65}];
+   const countryLabels=[{lat:a[0],lng:a[1],text:'Origin: '+origin,color:'#38e0ae',size:0.82},{lat:b[0],lng:b[1],text:'Destination: '+destination,color:'#ffc45c',size:0.82}];
    nearby.slice(0,8).forEach((name:string)=>{const p=countryLatLon(name);countryLabels.push({lat:p[0],lng:p[1],text:name,color:'#cce8ff',size:0.42} as any)});
    globe=Globe()(container)
     .width(Math.max(container.clientWidth,300))
@@ -138,9 +138,8 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     .pointsData(points).pointLat('lat').pointLng('lng').pointColor('color').pointAltitude(0.025).pointRadius('size').pointLabel('label')
     .labelsData(countryLabels).labelLat('lat').labelLng('lng').labelText('text').labelColor('color').labelSize('size').labelDotRadius(0.22).labelAltitude(0.025)
     .ringsData(points).ringLat('lat').ringLng('lng').ringColor((d:any)=>()=>d.color).ringMaxRadius(3.5).ringPropagationSpeed(2).ringRepeatPeriod(950);
-   if(globe.controls){globe.controls().autoRotate=true;globe.controls().autoRotateSpeed=0.45;globe.controls().enableZoom=true}
    const controls=globe.controls?.();
-   if(controls){controls.autoRotate=true;controls.autoRotateSpeed=0.38;controls.minDistance=130;controls.maxDistance=450}
+   if(controls){controls.autoRotate=false;controls.enableZoom=true;controls.minDistance=130;controls.maxDistance=450}
    globe.pointOfView({lat:(a[0]+b[0])/2,lng:(a[1]+b[1])/2,altitude:2.05},900);
    resizeHandler=()=>{if(globe&&container){globe.width(Math.max(container.clientWidth,300)).height(Math.max(container.clientHeight,260))}};
    window.addEventListener('resize',resizeHandler);
