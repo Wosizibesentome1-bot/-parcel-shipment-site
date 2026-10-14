@@ -207,3 +207,14 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .parcel-street-map .parcel-current-map-label:before{border-top-color:#087b4b!important}
 .parcel-street-map-scene .route-map-note{left:12px;right:auto;bottom:12px;max-width:calc(100% - 24px);margin:0;background:#ffffffed;color:#405168;padding:7px 10px;border-radius:7px;font-size:10px;text-align:left;z-index:500}
 @media(max-width:640px){.parcel-street-map{height:330px!important;min-height:330px!important}.parcel-street-map .parcel-map-label{font-size:9px!important;padding:5px 6px!important}.parcel-street-map .parcel-current-map-label{font-size:9px!important;padding:6px 7px!important}.parcel-street-map-scene .route-map-note{font-size:9px}}
+
+
+/* Final route-map correction: clean geographic basemap and map-positioned neighboring countries */
+.parcel-street-map-scene{display:block!important;min-height:0!important;padding:0!important;background:#eaf2f7!important}
+.parcel-street-map{display:block!important;width:100%!important;height:clamp(350px,52vw,520px)!important;min-height:350px!important;border-radius:0!important;overflow:hidden!important}
+.parcel-street-map .leaflet-container{width:100%!important;height:100%!important;background:#e6eff5!important;font-family:Arial,system-ui,sans-serif!important}
+.parcel-street-map .leaflet-control-attribution{background:rgba(255,255,255,.88)!important;font-size:9px!important}
+.parcel-street-map .parcel-geographic-country-label{background:transparent!important;border:0!important;pointer-events:none!important}
+.parcel-street-map .parcel-geographic-country-label span{display:block;white-space:nowrap;transform:translate(-50%,-50%);padding:3px 6px;border-radius:4px;background:rgba(255,255,255,.88);color:#23465b;font-size:10px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;text-shadow:0 1px #fff;box-shadow:0 1px 4px rgba(20,50,70,.12)}
+.parcel-street-map-scene .route-map-note{position:absolute!important;left:12px!important;right:auto!important;bottom:12px!important;top:auto!important;width:auto!important;max-width:calc(100% - 24px)!important;background:rgba(255,255,255,.95)!important;color:#405168!important;border:1px solid #d7e4ec!important;box-shadow:0 2px 9px rgba(15,45,70,.12)!important}
+@media(max-width:640px){.parcel-street-map{height:350px!important;min-height:350px!important}.parcel-street-map .parcel-geographic-country-label span{font-size:8px;padding:2px 4px;letter-spacing:0}.parcel-street-map-scene .route-map-note{left:8px!important;bottom:8px!important;font-size:9px!important}}
