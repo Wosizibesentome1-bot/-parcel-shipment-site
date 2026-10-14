@@ -104,54 +104,58 @@ function ensureGlobe():Promise<any>{
  });
 }
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
- const globeRef=useRef<HTMLDivElement|null>(null);
+ const mapRef=useRef<HTMLDivElement|null>(null);
  const [mapError,setMapError]=useState(false);
  const nearby=nearbyCountryNames(origin,destination);
  const nearbyKey=nearby.join('|');
  useEffect(()=>{
-  let globe:any=null,disposed=false,resizeHandler:(()=>void)|null=null;
+  let map:any=null,disposed=false,resizeHandler:(()=>void)|null=null;
   setMapError(false);
-  ensureGlobe().then((Globe:any)=>{
-   if(disposed||!globeRef.current)return;
-   const a=countryLatLon(origin),b=countryLatLon(destination);
-   const container=globeRef.current;
-   const route=[{startLat:a[0],startLng:a[1],endLat:b[0],endLng:b[1],color:['#38e0ae','#ffc45c']}];
-   const points=[
-    {lat:a[0],lng:a[1],label:'Origin: '+origin,color:'#38e0ae',size:0.65},
-    {lat:b[0],lng:b[1],label:'Destination: '+destination,color:'#ffc45c',size:0.75}
-   ];
-   const countryLabels=[{lat:a[0],lng:a[1],text:'ORIGIN · '+origin,color:'#38e0ae',kind:'endpoint'},{lat:b[0],lng:b[1],text:'DESTINATION · '+destination,color:'#ffc45c',kind:'endpoint'}];
-   nearby.slice(0,8).forEach((name:string)=>{const p=countryLatLon(name);countryLabels.push({lat:p[0],lng:p[1],text:name,color:'#ffffff',kind:'nearby'} as any)});
-   globe=Globe()(container)
-    .width(Math.max(container.clientWidth,300))
-    .height(Math.max(container.clientHeight,260))
-    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-    .backgroundColor('#061426')
-    .showAtmosphere(true)
-    .atmosphereColor('#57b9ff')
-    .atmosphereAltitude(0.16)
-    .arcsData(route)
-    .arcStartLat('startLat').arcStartLng('startLng').arcEndLat('endLat').arcEndLng('endLng')
-    .arcColor('color').arcStroke(0.65).arcDashLength(0.45).arcDashGap(0.22).arcDashInitialGap(()=>Math.random()).arcDashAnimateTime(1800)
-    .pointsData(points).pointLat('lat').pointLng('lng').pointColor('color').pointAltitude(0.025).pointRadius('size').pointLabel('label')
-    .htmlElementsData(countryLabels).htmlLat('lat').htmlLng('lng').htmlElement((d:any)=>{const el=document.createElement('div');el.textContent=d.text;el.style.cssText='font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:.02em;white-space:nowrap;pointer-events:none;transform:translate(-50%,-115%);text-shadow:0 1px 2px #00101f,0 0 5px #00101f;color:#fff;';if(d.kind==='endpoint'){el.style.fontSize='clamp(12px,1.5vw,16px)';el.style.color=d.color;el.style.background='rgba(3,16,31,.94)';el.style.border='2px solid '+d.color;el.style.borderRadius='7px';el.style.padding='6px 9px';el.style.boxShadow='0 2px 10px rgba(0,0,0,.65)'}else{el.style.fontSize='12px';el.style.background='rgba(3,16,31,.86)';el.style.border='1px solid rgba(255,255,255,.65)';el.style.borderRadius='5px';el.style.padding='4px 6px';el.style.boxShadow='0 2px 7px rgba(0,0,0,.55)'}return el;}).htmlAltitude(0.04)
-    .ringsData(points).ringLat('lat').ringLng('lng').ringColor((d:any)=>()=>d.color).ringMaxRadius(3.5).ringPropagationSpeed(2).ringRepeatPeriod(950);
-   const controls=globe.controls?.();
-   if(controls){controls.autoRotate=false;controls.enableZoom=true;controls.minDistance=130;controls.maxDistance=450}
-   const latMid=(a[0]+b[0])/2;let lonDelta=((b[1]-a[1]+540)%360)-180;const lonMid=((a[1]+lonDelta/2+540)%360)-180;globe.pointOfView({lat:latMid,lng:lonMid,altitude:2.05},900);
-   resizeHandler=()=>{if(globe&&container){globe.width(Math.max(container.clientWidth,300)).height(Math.max(container.clientHeight,260))}};
+  const loadLeaflet=()=>new Promise<any>((resolve,reject)=>{
+   const w=window as any;
+   if(!document.querySelector('link[data-parcel-leaflet]')){
+    const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css);
+   }
+   if(w.L){resolve(w.L);return}
+   const existing=document.querySelector('script[data-parcel-leaflet]');
+   if(existing){existing.addEventListener('load',()=>resolve(w.L),{once:true});existing.addEventListener('error',()=>reject(new Error('Map library failed to load')),{once:true});return}
+   const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Map library failed to load'));document.head.appendChild(script);
+  });
+  loadLeaflet().then((L:any)=>{
+   if(disposed||!mapRef.current)return;
+   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
+   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],3);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:18}).addTo(map);
+   const bounds:any[]=[];
+   const addPin=(coords:[number,number],title:string,color:string,kind:string)=>{
+    const marker=L.circleMarker(coords,{radius:kind==='current'?9:7,color:'#ffffff',weight:3,fillColor:color,fillOpacity:1}).addTo(map);
+    marker.bindTooltip(title,{permanent:true,direction:'top',offset:[0,-8],className:'parcel-map-label'}).openTooltip();
+    bounds.push(coords);
+   };
+   addPin(start,'ORIGIN · '+origin,'#1479e8','origin');
+   addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
+   if(Math.abs(now[0]-start[0])>0.15||Math.abs(now[1]-start[1])>0.15){
+    addPin(now,'CURRENT · '+current,'#159957','current');
+   } else {
+    addPin(start,'CURRENT · '+(current||origin),'#159957','current');
+   }
+   L.polyline([start,end],{color:'#1479e8',weight:4,opacity:.9,dashArray:'10 8',lineCap:'round'}).addTo(map);
+   const all=[start,end,now];
+   if(all.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))){
+    map.fitBounds(L.latLngBounds(all),{padding:[42,42],maxZoom:5});
+   }
+   resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
+   setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(globe&&typeof globe._destructor==='function')globe._destructor();if(globeRef.current)globeRef.current.innerHTML=''};
- },[origin,destination,nearbyKey]);
+  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){map.remove();map=null}};
+ },[origin,destination,current,nearbyKey]);
  return <div className="shipment-globe-card route-overview-card globe3d-card">
-  <div className="globe-heading"><div><span className="globe-kicker">SHIPMENT ROUTE</span><h3>3D Earth route overview</h3><p>Explore the journey on a realistic Earth globe. Drag to rotate and use the controls to zoom.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
-  <div className="globe-scene route-map-scene globe3d-scene">
-   <div ref={globeRef} className="live-earth-globe" role="img" aria-label={`3D Earth globe showing shipment route from ${origin} to ${destination}`}/>
-   {mapError&&<div className="live-map-fallback">The 3D Earth view could not initialize in this browser. Refresh the page or try opening the site in Safari or Chrome.</div>}
-   <div className="globe-note route-map-note">Illustrative country-to-country route · not live GPS</div>
+  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>View the route, origin, destination and latest reported location on a familiar map.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-scene route-map-scene parcel-street-map-scene">
+   <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Map showing shipment route from ${origin} to ${destination}, with latest reported location ${current}`}/>
+   {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
+   <div className="globe-note route-map-note">Route and location markers are approximate country-level indicators, not live GPS.</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
   <div className="route-summary">
