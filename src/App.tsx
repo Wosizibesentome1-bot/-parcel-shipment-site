@@ -125,8 +125,34 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    if(disposed||!mapRef.current)return;
    const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],3);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:18}).addTo(map);
+   // A clean, readable road-and-country basemap with clear borders and place labels.
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
    const bounds:any[]=[];
+   // Put nearby country names on the map itself at their approximate geographic positions.
+   const neighborPoints:Record<string,[number,number]> = {
+    'Canada':[56,-106],'Mexico':[23,-102],'Guatemala':[15.8,-90.2],'Belize':[17.2,-88.7],
+    'Saudi Arabia':[24,45],'United Arab Emirates':[24,54],'Bahrain':[26.1,50.6],'Oman':[21,57],
+    'Ireland':[53,-8],'France':[46,2],'Belgium':[50.5,4.5],'Netherlands':[52.2,5.3],
+    'Benin':[9.3,2.3],'Niger':[17,9.4],'Chad':[15,19],'Cameroon':[6,12],
+    'Jordan':[31,36],'Iraq':[33,44],'Kuwait':[29.3,47.5],'Yemen':[15,48],
+    'Qatar':[25.3,51.5],'India':[22,79],'Nepal':[28,84],'China':[35,103],
+    'Portugal':[39.5,-8],'Spain':[40,-4],'Germany':[51,10],'Switzerland':[47,8],
+    'Austria':[47.5,14.5],'Czechia':[49.8,15.5],'Poland':[52,20],
+    'Togo':[8.6,1.2],'Burkina Faso':[12.3,-1.6],"Côte d’Ivoire":[7.5,-5.5],
+    'Namibia':[-22,17],'Botswana':[-22,24],'Zimbabwe':[-19,30],'Mozambique':[-18,35],
+    'Eswatini':[-26.5,31.5],'Lesotho':[-29.5,28.3],'Ethiopia':[9,40],'Somalia':[5,46],
+    'Tanzania':[-6,35],'Uganda':[1,32],'South Sudan':[7,30]
+   };
+   const neighbors=[...new Set(nearby)].filter(name=>neighborPoints[name]);
+   neighbors.forEach(name=>{
+    const coords=neighborPoints[name];
+    L.marker(coords,{interactive:false,keyboard:false,icon:L.divIcon({
+     className:'parcel-geographic-country-label',
+     html:'<span>'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>',
+     iconSize:[Math.max(48,name.length*7),18],iconAnchor:[Math.max(24,name.length*3.5),9]
+    }),zIndexOffset:-100}).addTo(map);
+    bounds.push(coords);
+   });
    const samePoint=(a:[number,number],b:[number,number])=>Math.abs(a[0]-b[0])<0.2&&Math.abs(a[1]-b[1])<0.2;
    const endpointIcon=(kind:'origin'|'destination')=>L.divIcon({
     className:'parcel-map-pin-shell',
@@ -167,7 +193,8 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    L.polyline([start,end],{color:'#167ac6',weight:4,opacity:1,dashArray:'9 9',lineCap:'round'}).addTo(map);
    const all=[start,end,now];
    if(all.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))){
-    map.fitBounds(L.latLngBounds(all),{padding:[42,42],maxZoom:5});
+    const visiblePoints=[...all,...bounds];
+    map.fitBounds(L.latLngBounds(visiblePoints),{padding:[34,34],maxZoom:4});
    }
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
@@ -176,7 +203,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){map.remove();map=null}};
  },[origin,destination,current,nearbyKey]);
  return <div className="shipment-globe-card route-overview-card globe3d-card">
-  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Street-level map with a highlighted current location and a clear route between the origin and destination.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Geographic route map with country borders, nearby countries, and a clearly marked latest location.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene parcel-street-map-scene">
    <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Map showing shipment route from ${origin} to ${destination}, with latest reported location ${current}`}/>
    {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
