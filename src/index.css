@@ -176,3 +176,8 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .parcel-map-label:before{border-top-color:#152b43!important}
 .parcel-street-map-scene .route-map-note{left:12px;right:12px;bottom:10px;top:auto;width:max-content;max-width:calc(100% - 24px);margin:0;background:#ffffffed;color:#405168;padding:7px 10px;border-radius:7px;font-size:10px;text-align:left;z-index:500}
 @media(max-width:640px){.parcel-street-map{height:330px;min-height:330px}.parcel-map-label{font-size:9px!important;padding:4px 5px!important}.parcel-street-map-scene .route-map-note{font-size:9px}}
+
+/* Geographic neighbor labels shown in their map positions, not only in the list below */
+.parcel-street-map .parcel-country-name-wrap{background:transparent!important;border:0!important;white-space:nowrap;pointer-events:none}
+.parcel-street-map .parcel-country-name{display:inline-block;transform:translate(-50%,-50%);padding:3px 5px;border-radius:3px;background:#ffffffd9;color:#35485a;font-size:10px;line-height:1.2;font-weight:800;letter-spacing:.035em;text-transform:uppercase;text-shadow:0 1px 0 #fff;box-shadow:0 1px 4px #20354a18}
+@media(max-width:640px){.parcel-street-map .parcel-country-name{font-size:8px;padding:2px 3px;letter-spacing:0}}
