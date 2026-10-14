@@ -218,3 +218,9 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .parcel-street-map .parcel-geographic-country-label span{display:block;white-space:nowrap;transform:translate(-50%,-50%);padding:3px 6px;border-radius:4px;background:rgba(255,255,255,.88);color:#23465b;font-size:10px;font-weight:800;letter-spacing:.035em;text-transform:uppercase;text-shadow:0 1px #fff;box-shadow:0 1px 4px rgba(20,50,70,.12)}
 .parcel-street-map-scene .route-map-note{position:absolute!important;left:12px!important;right:auto!important;bottom:12px!important;top:auto!important;width:auto!important;max-width:calc(100% - 24px)!important;background:rgba(255,255,255,.95)!important;color:#405168!important;border:1px solid #d7e4ec!important;box-shadow:0 2px 9px rgba(15,45,70,.12)!important}
 @media(max-width:640px){.parcel-street-map{height:350px!important;min-height:350px!important}.parcel-street-map .parcel-geographic-country-label span{font-size:8px;padding:2px 4px;letter-spacing:0}.parcel-street-map-scene .route-map-note{left:8px!important;bottom:8px!important;font-size:9px!important}}
+
+
+/* Restore the delivery photo directly beneath the homepage delivery message */
+.home-image-copy{display:flex;flex-direction:column;align-items:flex-start}
+.home-image-copy .delivery-copy-photo{display:block;width:100%;height:clamp(190px,25vw,300px);margin-top:18px;object-fit:cover;border-radius:14px;border:1px solid #e0e7ee;box-shadow:0 8px 24px rgba(15,35,55,.10)}
+@media(max-width:700px){.home-image-copy .delivery-copy-photo{height:220px;margin-top:14px}}
