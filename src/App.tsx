@@ -125,9 +125,9 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    globe=Globe()(container)
     .width(Math.max(container.clientWidth,300))
     .height(Math.max(container.clientHeight,260))
-    .globeImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/earth-blue-marble.jpg')
-    .bumpImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/earth-topology.png')
-    .backgroundImageUrl('https://cdn.jsdelivr.net/npm/three-globe@2.41.12/example/img/night-sky.png')
+    .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+    .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+    .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
     .backgroundColor('#061426')
     .showAtmosphere(true)
     .atmosphereColor('#57b9ff')
@@ -140,7 +140,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     .ringsData(points).ringLat('lat').ringLng('lng').ringColor((d:any)=>()=>d.color).ringMaxRadius(3.5).ringPropagationSpeed(2).ringRepeatPeriod(950);
    const controls=globe.controls?.();
    if(controls){controls.autoRotate=false;controls.enableZoom=true;controls.minDistance=130;controls.maxDistance=450}
-   globe.pointOfView({lat:(a[0]+b[0])/2,lng:(a[1]+b[1])/2,altitude:2.05},900);
+   const latMid=(a[0]+b[0])/2;let lonDelta=((b[1]-a[1]+540)%360)-180;const lonMid=((a[1]+lonDelta/2+540)%360)-180;globe.pointOfView({lat:latMid,lng:lonMid,altitude:2.05},900);
    resizeHandler=()=>{if(globe&&container){globe.width(Math.max(container.clientWidth,300)).height(Math.max(container.clientHeight,260))}};
    window.addEventListener('resize',resizeHandler);
   }).catch(()=>{if(!disposed)setMapError(true)});
@@ -235,4 +235,4 @@ const Status=({value}:{value:string})=><span className={'status '+value.toLowerC
 const Info=({label,value}:{label:string;value:string})=><div><span>{label}</span><strong>{value||'—'}</strong></div>;
 const Feature=({icon,title,text}:{icon:any;title:string;text:string})=><div className="feature"><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div></div>;
 const Stat=({label,value}:{label:string;value:number})=><div className="stat"><span>{label}</span><strong>{value}</strong></div>;
-function RouteMap({shipment:s}:{shipment:Shipment}){const current=s.currentLocation||s.origin;const hasCoords=Number.isFinite(Number(s.latitude))&&Number.isFinite(Number(s.longitude));const lat=Number(s.latitude),lon=Number(s.longitude);const delta=.08;const mapUrl=hasCoords?'https://www.openstreetmap.org/export/embed.html?bbox='+(lon-delta)+'%2C'+(lat-delta)+'%2C'+(lon+delta)+'%2C'+(lat+delta)+'&layer=mapnik&marker='+lat+'%2C'+lon:'';return <div className="route-map"><div className="route-map-head"><div><span className="muted">LIVE ROUTE</span><strong>Package location</strong></div><span className="route-live"><i/> {hasCoords?(s.status==='Delivered'?'Delivered':'Location available'):'Location pending'}</span></div>{hasCoords?<div className="live-map"><iframe title="Exact package location map" src={mapUrl} loading="lazy"/><div className="map-location"><MapPin size={15}/> {current} · {lat.toFixed(5)}, {lon.toFixed(5)}</div></div>:<ShipmentGlobe origin={s.origin} destination={s.destination} current={current} status={s.status}/>} <div className="route-track"><div className="country-node"><div className="country-pin"><Truck size={16}/></div><strong>{s.origin}</strong><span>Origin</span></div><div className="route-path"><div className="route-line"/><div className="moving-package"><Package size={17}/></div><span className="route-current">Currently: {current}</span></div><div className="country-node destination-node"><div className="country-pin"><MapPin size={16}/></div><strong>{s.destination}</strong><span>Destination</span></div></div><div className="route-caption">Your package is being tracked from {s.origin} to {s.destination}.</div></div>}
+function RouteMap({shipment:s}:{shipment:Shipment}){const current=s.currentLocation||s.origin;return <div className="route-map"><div className="route-map-head"><div><span className="muted">SHIPMENT ROUTE</span><strong>Origin to destination</strong></div><span className="route-live"><i/> {s.status||'In transit'}</span></div><ShipmentGlobe origin={s.origin} destination={s.destination} current={current} status={s.status}/><div className="route-caption">The globe shows the illustrative country-to-country route. It is not live GPS tracking unless verified location coordinates are provided.</div></div>}
