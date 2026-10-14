@@ -127,26 +127,27 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],3);
    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:18}).addTo(map);
    const bounds:any[]=[];
+   const samePoint=(a:[number,number],b:[number,number])=>Math.abs(a[0]-b[0])<0.2&&Math.abs(a[1]-b[1])<0.2;
    const addPin=(coords:[number,number],title:string,color:string,kind:string)=>{
-    const marker=L.circleMarker(coords,{radius:kind==='current'?9:7,color:'#ffffff',weight:3,fillColor:color,fillOpacity:1}).addTo(map);
-    marker.bindTooltip(title,{permanent:true,direction:'top',offset:[0,-8],className:'parcel-map-label'}).openTooltip();
+    const marker=L.circleMarker(coords,{radius:kind==='current'?10:7,color:'#ffffff',weight:3,fillColor:color,fillOpacity:1}).addTo(map);
+    marker.bindTooltip(title,{permanent:true,direction:kind==='current'?'top':'bottom',offset:kind==='current'?[0,-10]:[0,9],className:kind==='current'?'parcel-current-map-label':'parcel-map-label'}).openTooltip();
     bounds.push(coords);
    };
-   addPin(start,'ORIGIN · '+origin,'#1479e8','origin');
-   addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
-   if(Math.abs(now[0]-start[0])>0.15||Math.abs(now[1]-start[1])>0.15){
-    addPin(now,'CURRENT · '+current,'#159957','current');
-   } else {
-    addPin(start,'CURRENT · '+(current||origin),'#159957','current');
+   const currentAtOrigin=samePoint(now,start);
+   const currentAtDestination=samePoint(now,end);
+   // If current location matches an endpoint at country-level, show one clear marker rather than stacking pins.
+   if(currentAtOrigin){
+    addPin(start,'CURRENT LOCATION · '+(current||origin),'#159957','current');
+   }else{
+    addPin(start,'ORIGIN · '+origin,'#1479e8','origin');
+    if(currentAtDestination){
+     addPin(end,'CURRENT LOCATION · '+(current||destination),'#159957','current');
+    }else{
+     addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
+     addPin(now,'CURRENT LOCATION · '+(current||origin),'#159957','current');
+    }
    }
    L.polyline([start,end],{color:'#1479e8',weight:4,opacity:.9,dashArray:'10 8',lineCap:'round'}).addTo(map);
-   // Place neighboring country names directly on the map, at their approximate geographic positions.
-   nearby.slice(0,8).forEach((name:string)=>{
-    const p=countryLatLon(name);
-    if(!Number.isFinite(p[0])||!Number.isFinite(p[1]))return;
-    const label=L.divIcon({className:'parcel-country-name-wrap',html:'<span class="parcel-country-name">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>',iconSize:[0,0],iconAnchor:[0,0]});
-    L.marker(p,{icon:label,interactive:false,keyboard:false,zIndexOffset:-100}).addTo(map);
-   });
    const all=[start,end,now];
    if(all.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))){
     map.fitBounds(L.latLngBounds(all),{padding:[42,42],maxZoom:5});
@@ -158,11 +159,11 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){map.remove();map=null}};
  },[origin,destination,current,nearbyKey]);
  return <div className="shipment-globe-card route-overview-card globe3d-card">
-  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>View the route, origin, destination and latest reported location on a familiar map.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>The green marker shows the latest reported location. Country names come from the map itself.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene parcel-street-map-scene">
    <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Map showing shipment route from ${origin} to ${destination}, with latest reported location ${current}`}/>
    {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
-   <div className="globe-note route-map-note">Route and location markers are approximate country-level indicators, not live GPS.</div>
+   <div className="globe-note route-map-note">Current location is the latest recorded shipment location, not live GPS.</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
   <div className="route-summary">
