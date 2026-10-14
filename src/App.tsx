@@ -100,7 +100,7 @@ function ensureGlobe():Promise<any>{
   if(w.Globe){resolve(w.Globe);return}
   const existing=document.querySelector('script[data-parcel-globe]') as HTMLScriptElement|null;
   if(existing){existing.addEventListener('load',()=>resolve((window as any).Globe),{once:true});existing.addEventListener('error',()=>reject(new Error('3D globe library failed to load')),{once:true});if(w.Globe)resolve(w.Globe);return}
-  const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/globe.gl@2.41.12/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
+  const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
  });
 }
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
