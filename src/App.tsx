@@ -138,14 +138,14 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    // If current location matches an endpoint at country-level, show one clear marker rather than stacking pins.
    if(currentAtOrigin){
     addPin(start,'CURRENT LOCATION · '+(current||origin),'#159957','current');
+    addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
+   }else if(currentAtDestination){
+    addPin(start,'ORIGIN · '+origin,'#1479e8','origin');
+    addPin(end,'CURRENT LOCATION · '+(current||destination),'#159957','current');
    }else{
     addPin(start,'ORIGIN · '+origin,'#1479e8','origin');
-    if(currentAtDestination){
-     addPin(end,'CURRENT LOCATION · '+(current||destination),'#159957','current');
-    }else{
-     addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
-     addPin(now,'CURRENT LOCATION · '+(current||origin),'#159957','current');
-    }
+    addPin(end,'DESTINATION · '+destination,'#e86a18','destination');
+    addPin(now,'CURRENT LOCATION · '+(current||origin),'#159957','current');
    }
    L.polyline([start,end],{color:'#1479e8',weight:4,opacity:.9,dashArray:'10 8',lineCap:'round'}).addTo(map);
    const all=[start,end,now];
