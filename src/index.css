@@ -164,3 +164,15 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .globe3d-scene .route-map-note{position:absolute;right:12px;bottom:10px;z-index:5;pointer-events:none;padding:6px 9px;border:1px solid #ffffff24;border-radius:7px;background:#07182bc9;color:#d2e6f5;font-size:9px}
 .globe3d-scene .live-map-fallback{position:absolute;inset:20px;z-index:6;display:grid;place-items:center}
 @media(max-width:600px){.live-earth-globe{height:310px;min-height:280px}.globe3d-scene .route-map-note{right:7px;bottom:7px;font-size:8px}}
+
+/* Shipment route: familiar street-map presentation */
+.parcel-street-map-scene{background:#edf3f7!important;position:relative;border-radius:14px;overflow:hidden}
+.parcel-street-map{width:100%;height:clamp(320px,48vw,470px);min-height:320px;background:#e8eef2!important;cursor:grab;touch-action:pan-y}
+.parcel-street-map:active{cursor:grabbing}
+.parcel-street-map .leaflet-container{width:100%;height:100%;font-family:Inter,system-ui,sans-serif;background:#e8eef2}
+.parcel-street-map .leaflet-control-attribution{font-size:9px}
+.parcel-street-map .leaflet-control-zoom a{color:#1f2937}
+.parcel-map-label{border:0!important;border-radius:6px!important;background:#152b43!important;color:#fff!important;font-size:10px!important;font-weight:800!important;letter-spacing:.025em;padding:5px 7px!important;box-shadow:0 3px 12px #10243b30!important;white-space:nowrap}
+.parcel-map-label:before{border-top-color:#152b43!important}
+.parcel-street-map-scene .route-map-note{left:12px;right:12px;bottom:10px;top:auto;width:max-content;max-width:calc(100% - 24px);margin:0;background:#ffffffed;color:#405168;padding:7px 10px;border-radius:7px;font-size:10px;text-align:left;z-index:500}
+@media(max-width:640px){.parcel-street-map{height:330px;min-height:330px}.parcel-map-label{font-size:9px!important;padding:4px 5px!important}.parcel-street-map-scene .route-map-note{font-size:9px}}
