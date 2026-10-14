@@ -140,6 +140,13 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     addPin(start,'CURRENT · '+(current||origin),'#159957','current');
    }
    L.polyline([start,end],{color:'#1479e8',weight:4,opacity:.9,dashArray:'10 8',lineCap:'round'}).addTo(map);
+   // Place neighboring country names directly on the map, at their approximate geographic positions.
+   nearby.slice(0,8).forEach((name:string)=>{
+    const p=countryLatLon(name);
+    if(!Number.isFinite(p[0])||!Number.isFinite(p[1]))return;
+    const label=L.divIcon({className:'parcel-country-name-wrap',html:'<span class="parcel-country-name">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</span>',iconSize:[0,0],iconAnchor:[0,0]});
+    L.marker(p,{icon:label,interactive:false,keyboard:false,zIndexOffset:-100}).addTo(map);
+   });
    const all=[start,end,now];
    if(all.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))){
     map.fitBounds(L.latLngBounds(all),{padding:[42,42],maxZoom:5});
