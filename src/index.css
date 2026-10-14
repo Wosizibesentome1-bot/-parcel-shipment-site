@@ -187,3 +187,23 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .parcel-street-map .parcel-current-map-label{border:2px solid #fff!important;border-radius:8px!important;background:#087b4b!important;color:#fff!important;font-size:11px!important;font-weight:900!important;letter-spacing:.02em;padding:7px 9px!important;box-shadow:0 4px 16px rgba(5,75,45,.3)!important;white-space:nowrap}
 .parcel-street-map .parcel-current-map-label:before{border-top-color:#087b4b!important}
 @media(max-width:640px){.parcel-street-map .parcel-current-map-label{font-size:9px!important;padding:5px 7px!important}}
+
+
+/* Clean pin-and-route style matching a standard shipment tracking map */
+.parcel-street-map-scene{background:#eaf1f5!important;padding:0!important}
+.parcel-street-map{height:clamp(340px,48vw,490px)!important;min-height:340px!important;border-radius:0!important}
+.parcel-street-map .leaflet-container{background:#eaf1f5}
+.parcel-map-pin-shell{background:transparent!important;border:0!important}
+.parcel-map-pin{position:relative;display:block;width:26px;height:26px;margin:3px 0 0 1px;border:3px solid #fff;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 10px rgba(16,38,55,.3)}
+.parcel-map-pin>span{position:absolute;inset:6px;border-radius:50%;background:#fff}
+.parcel-map-pin-origin{background:#1479e8}
+.parcel-map-pin-destination{background:#e86a18}
+.parcel-map-pin-current{width:32px;height:32px;margin:4px 0 0 3px;background:#0c9b61;box-shadow:0 0 0 5px rgba(12,155,97,.17),0 4px 14px rgba(10,68,48,.35);animation:parcelCurrentPulse 2s ease-out infinite}
+.parcel-map-pin-current>span{inset:8px;background:#fff}
+@keyframes parcelCurrentPulse{0%,100%{box-shadow:0 0 0 4px rgba(12,155,97,.15),0 4px 14px rgba(10,68,48,.3)}50%{box-shadow:0 0 0 9px rgba(12,155,97,.04),0 4px 14px rgba(10,68,48,.3)}}
+.parcel-street-map .parcel-map-label{border:1px solid #d9e3eb!important;border-radius:7px!important;background:#fff!important;color:#24384a!important;font-size:10px!important;font-weight:800!important;padding:6px 8px!important;box-shadow:0 3px 12px rgba(20,45,65,.17)!important}
+.parcel-street-map .parcel-map-label:before{border-top-color:#fff!important}
+.parcel-street-map .parcel-current-map-label{border:0!important;border-radius:9px!important;background:#087b4b!important;color:#fff!important;font-size:11px!important;font-weight:900!important;letter-spacing:.015em;padding:8px 10px!important;box-shadow:0 4px 16px rgba(5,75,45,.28)!important;white-space:nowrap}
+.parcel-street-map .parcel-current-map-label:before{border-top-color:#087b4b!important}
+.parcel-street-map-scene .route-map-note{left:12px;right:auto;bottom:12px;max-width:calc(100% - 24px);margin:0;background:#ffffffed;color:#405168;padding:7px 10px;border-radius:7px;font-size:10px;text-align:left;z-index:500}
+@media(max-width:640px){.parcel-street-map{height:330px!important;min-height:330px!important}.parcel-street-map .parcel-map-label{font-size:9px!important;padding:5px 6px!important}.parcel-street-map .parcel-current-map-label{font-size:9px!important;padding:6px 7px!important}.parcel-street-map-scene .route-map-note{font-size:9px}}
