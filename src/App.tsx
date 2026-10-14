@@ -120,8 +120,8 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     {lat:a[0],lng:a[1],label:'Origin: '+origin,color:'#38e0ae',size:0.65},
     {lat:b[0],lng:b[1],label:'Destination: '+destination,color:'#ffc45c',size:0.75}
    ];
-   const countryLabels=[{lat:a[0],lng:a[1],text:'Origin: '+origin,color:'#38e0ae',size:0.82},{lat:b[0],lng:b[1],text:'Destination: '+destination,color:'#ffc45c',size:0.82}];
-   nearby.slice(0,8).forEach((name:string)=>{const p=countryLatLon(name);countryLabels.push({lat:p[0],lng:p[1],text:name,color:'#cce8ff',size:0.42} as any)});
+   const countryLabels=[{lat:a[0],lng:a[1],text:'ORIGIN · '+origin,color:'#38e0ae',kind:'endpoint'},{lat:b[0],lng:b[1],text:'DESTINATION · '+destination,color:'#ffc45c',kind:'endpoint'}];
+   nearby.slice(0,8).forEach((name:string)=>{const p=countryLatLon(name);countryLabels.push({lat:p[0],lng:p[1],text:name,color:'#ffffff',kind:'nearby'} as any)});
    globe=Globe()(container)
     .width(Math.max(container.clientWidth,300))
     .height(Math.max(container.clientHeight,260))
@@ -136,7 +136,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     .arcStartLat('startLat').arcStartLng('startLng').arcEndLat('endLat').arcEndLng('endLng')
     .arcColor('color').arcStroke(0.65).arcDashLength(0.45).arcDashGap(0.22).arcDashInitialGap(()=>Math.random()).arcDashAnimateTime(1800)
     .pointsData(points).pointLat('lat').pointLng('lng').pointColor('color').pointAltitude(0.025).pointRadius('size').pointLabel('label')
-    .labelsData(countryLabels).labelLat('lat').labelLng('lng').labelText('text').labelColor('color').labelSize('size').labelDotRadius(0.22).labelAltitude(0.025)
+    .htmlElementsData(countryLabels).htmlLat('lat').htmlLng('lng').htmlElement((d:any)=>{const el=document.createElement('div');el.textContent=d.text;el.style.cssText='font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:.02em;white-space:nowrap;pointer-events:none;transform:translate(-50%,-115%);text-shadow:0 1px 2px #00101f,0 0 5px #00101f;color:#fff;';if(d.kind==='endpoint'){el.style.fontSize='clamp(12px,1.5vw,16px)';el.style.color=d.color;el.style.background='rgba(3,16,31,.94)';el.style.border='2px solid '+d.color;el.style.borderRadius='7px';el.style.padding='6px 9px';el.style.boxShadow='0 2px 10px rgba(0,0,0,.65)'}else{el.style.fontSize='12px';el.style.background='rgba(3,16,31,.86)';el.style.border='1px solid rgba(255,255,255,.65)';el.style.borderRadius='5px';el.style.padding='4px 6px';el.style.boxShadow='0 2px 7px rgba(0,0,0,.55)'}return el;}).htmlAltitude(0.04)
     .ringsData(points).ringLat('lat').ringLng('lng').ringColor((d:any)=>()=>d.color).ringMaxRadius(3.5).ringPropagationSpeed(2).ringRepeatPeriod(950);
    const controls=globe.controls?.();
    if(controls){controls.autoRotate=false;controls.enableZoom=true;controls.minDistance=130;controls.maxDistance=450}
