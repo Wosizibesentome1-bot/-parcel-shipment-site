@@ -123,56 +123,20 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   });
   loadLeaflet().then((L:any)=>{
    if(disposed||!mapRef.current)return;
-   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
-   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],3);
-   // A clean, readable road-and-country basemap with clear borders and place labels.
+   const now=countryLatLon(current||origin);
+   // Focus the road map on the latest reported area, similar to a standard navigation map.
+   // The pin remains an approximate country-level position unless precise coordinates are provided.
+   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],6);
    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
-   const bounds:any[]=[];
-   const samePoint=(a:[number,number],b:[number,number])=>Math.abs(a[0]-b[0])<0.2&&Math.abs(a[1]-b[1])<0.2;
-   const endpointIcon=(kind:'origin'|'destination')=>L.divIcon({
-    className:'parcel-map-pin-shell',
-    html:`<span class="parcel-map-pin parcel-map-pin-${kind}"><span></span></span>`,
-    iconSize:[28,36],iconAnchor:[14,34]
-   });
    const currentIcon=L.divIcon({
     className:'parcel-map-pin-shell',
     html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',
     iconSize:[38,48],iconAnchor:[19,45]
    });
-   const addEndpoint=(coords:[number,number],title:string,kind:'origin'|'destination')=>{
-    const marker=L.marker(coords,{icon:endpointIcon(kind),keyboard:true,title}).addTo(map);
-    marker.bindTooltip(title,{direction:'top',offset:[0,-30],className:'parcel-map-label',opacity:.98});
-    marker.bindPopup('<strong>'+title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</strong>');
-    bounds.push(coords);
-   };
-   const addCurrent=(coords:[number,number],title:string)=>{
-    const marker=L.marker(coords,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title}).addTo(map);
-    marker.bindTooltip('CURRENT LOCATION · '+title,{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
-    marker.bindPopup('<strong>Latest reported location</strong><br/>'+title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'));
-    bounds.push(coords);
-   };
-   const currentAtOrigin=samePoint(now,start);
-   const currentAtDestination=samePoint(now,end);
-   if(currentAtOrigin){
-    addCurrent(start,current||origin);
-    addEndpoint(end,'DESTINATION · '+destination,'destination');
-   }else if(currentAtDestination){
-    addEndpoint(start,'ORIGIN · '+origin,'origin');
-    addCurrent(end,current||destination);
-   }else{
-    addEndpoint(start,'ORIGIN · '+origin,'origin');
-    addEndpoint(end,'DESTINATION · '+destination,'destination');
-    addCurrent(now,current||origin);
-   }
-   L.polyline([start,end],{color:'#ffffff',weight:8,opacity:.92,lineCap:'round'}).addTo(map);
-   L.polyline([start,end],{color:'#167ac6',weight:4,opacity:1,dashArray:'9 9',lineCap:'round'}).addTo(map);
-   const all=[start,end,now];
-   if(all.every(p=>Number.isFinite(p[0])&&Number.isFinite(p[1]))){
-    // Fit only the actual route and reported country-level location. The basemap
-    // itself supplies correctly positioned country names and borders; don't stretch
-    // the map to unrelated hard-coded coordinates.
-    map.fitBounds(L.latLngBounds(all),{padding:[42,42],maxZoom:4});
-   }
+   const safeTitle=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+   const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current||origin}).addTo(map);
+   marker.bindTooltip(safeTitle(current||origin),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
+   marker.bindPopup('<strong>Latest reported location</strong><br/>'+safeTitle(current||origin));
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
@@ -182,7 +146,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
  return <div className="shipment-globe-card route-overview-card globe3d-card">
   <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Geographic route map with country borders, nearby countries, and a clearly marked latest location.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene parcel-street-map-scene">
-   <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Map showing shipment route from ${origin} to ${destination}, with latest reported location ${current}`}/>
+   <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Road map focused on the latest reported shipment location ${current||origin}`}/>
    {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
    <div className="globe-note route-map-note">Latest recorded location · approximate country-level position, not live GPS.</div>
   </div>
