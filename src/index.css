@@ -226,3 +226,15 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 @media(max-width:700px){.home-image-copy .delivery-copy-photo{height:220px;margin-top:14px}}
 
 /* Redeploy trigger: restored delivery-copy photo styling verified. */
+
+
+/* Origin-to-destination route map styling */
+.parcel-map-pin-origin,.parcel-map-pin-destination{display:flex!important;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(20,25,40,.35)}
+.parcel-map-pin-origin{background:#5420a8!important}
+.parcel-map-pin-destination{background:#f36b12!important}
+.parcel-map-pin-origin span,.parcel-map-pin-destination span{display:block;width:8px;height:8px;border-radius:50%;background:#fff}
+.parcel-origin-map-label,.parcel-destination-map-label,.parcel-current-map-label{border:0!important;border-radius:7px!important;padding:5px 8px!important;font-size:12px!important;font-weight:700!important;box-shadow:0 2px 9px rgba(15,30,50,.18)!important;color:#172334!important}
+.parcel-origin-map-label:before,.parcel-destination-map-label:before,.parcel-current-map-label:before{display:none!important}
+.parcel-origin-map-label{background:#f1eaff!important}
+.parcel-destination-map-label{background:#fff0e5!important}
+.parcel-current-map-label{background:#e6f5ec!important}
