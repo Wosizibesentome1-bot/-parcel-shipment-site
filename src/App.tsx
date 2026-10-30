@@ -126,7 +126,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
    // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
    const safeTitle=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
    const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
    const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,keyboard:true,title:origin}).addTo(map);
@@ -142,7 +142,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
     marker.bindTooltip(safeTitle('Current: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
     marker.bindPopup('<strong>Latest reported location</strong><br/>'+safeTitle(current));
    }
-   if(Math.abs(start[0]-end[0])>0.01||Math.abs(start[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.18),{maxZoom:5});
+   if(Math.abs(start[0]-end[0])>0.01||Math.abs(start[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.28),{maxZoom:4,animate:false});
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
