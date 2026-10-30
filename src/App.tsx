@@ -123,20 +123,26 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   });
   loadLeaflet().then((L:any)=>{
    if(disposed||!mapRef.current)return;
-   const now=countryLatLon(current||origin);
-   // Focus the road map on the latest reported area, similar to a standard navigation map.
-   // The pin remains an approximate country-level position unless precise coordinates are provided.
-   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([now[0],now[1]],6);
+   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
+   // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
+   map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
-   const currentIcon=L.divIcon({
-    className:'parcel-map-pin-shell',
-    html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',
-    iconSize:[38,48],iconAnchor:[19,45]
-   });
    const safeTitle=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-   const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current||origin}).addTo(map);
-   marker.bindTooltip(safeTitle(current||origin),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
-   marker.bindPopup('<strong>Latest reported location</strong><br/>'+safeTitle(current||origin));
+   const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
+   const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,keyboard:true,title:origin}).addTo(map);
+   originMarker.bindTooltip(safeTitle('Origin: '+origin),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-origin-map-label',opacity:1}).openTooltip();
+   originMarker.bindPopup('<strong>Origin</strong><br/>'+safeTitle(origin));
+   const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,keyboard:true,title:destination}).addTo(map);
+   destinationMarker.bindTooltip(safeTitle('Destination: '+destination),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).openTooltip();
+   destinationMarker.bindPopup('<strong>Destination</strong><br/>'+safeTitle(destination));
+   const route=L.polyline([start,end],{color:'#5420a8',weight:5,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(map);
+   const currentIcon=L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
+   if(current && current.toLowerCase()!==origin.toLowerCase() && current.toLowerCase()!==destination.toLowerCase()){
+    const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current}).addTo(map);
+    marker.bindTooltip(safeTitle('Current: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
+    marker.bindPopup('<strong>Latest reported location</strong><br/>'+safeTitle(current));
+   }
+   if(Math.abs(start[0]-end[0])>0.01||Math.abs(start[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.18),{maxZoom:5});
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
