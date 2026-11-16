@@ -119,6 +119,12 @@ async function initDb(){
       PRIMARY KEY(customer_id,shipment_id)
     )
   `);
+  await pool.query(`
+    ALTER TABLE shipments
+    ADD COLUMN IF NOT EXISTS movement_started_at TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS movement_duration_ms BIGINT,
+    ADD COLUMN IF NOT EXISTS movement_start_location TEXT
+  `);
   await pool.query('CREATE INDEX IF NOT EXISTS shipments_tracking_idx ON shipments (UPPER(tracking_number))');
   const count=(await pool.query('SELECT COUNT(*)::int AS count FROM shipments')).rows[0].count;
   if(count===0){
@@ -137,7 +143,7 @@ function rowToShipment(r){
     eta:r.eta,shippingMethod:r.shipping_method,weight:r.weight,reference:r.reference,currentLocation:r.current_location,
     currentLatitude:r.current_latitude,currentLongitude:r.current_longitude,quantity:r.quantity,
     packageDimensions:r.package_dimensions,deliveryInstructions:r.delivery_instructions,itemImages:r.item_images||[],
-    events:r.events||[],createdAt:r.created_at?.toISOString?.()||r.created_at,updatedAt:r.updated_at?.toISOString?.()||r.updated_at
+    events:r.events||[],movementStartedAt:r.movement_started_at?.toISOString?.()||r.movement_started_at||null,movementDurationMs:r.movement_duration_ms==null?null:Number(r.movement_duration_ms),movementStartLocation:r.movement_start_location||null,createdAt:r.created_at?.toISOString?.()||r.created_at,updatedAt:r.updated_at?.toISOString?.()||r.updated_at
   };
 }
 
@@ -288,6 +294,23 @@ app.put('/api/admin/shipments/:id',async(req,res)=>{
     ]);
     res.json({shipment:await getShipmentById(next.id)});
   }catch(e){res.status(500).json({error:'Unable to update shipment'});}
+});
+
+app.post('/api/admin/shipments/:id/start-movement',async(req,res)=>{
+  try{
+    const s=await getShipmentById(req.params.id);
+    if(!s)return res.status(404).json({error:'Shipment not found'});
+    const durationMinutes=Number(req.body?.durationMinutes);
+    if(!Number.isFinite(durationMinutes)||durationMinutes<30||durationMinutes>43200)
+      return res.status(400).json({error:'Choose a movement duration between 30 minutes and 30 days.'});
+    const startLocation=String(req.body?.startLocation||s.currentLocation||s.origin||'').trim();
+    if(!startLocation||!s.destination)return res.status(400).json({error:'A current location and destination are required.'});
+    const startedAt=now(),durationMs=Math.round(durationMinutes*60000);
+    await pool.query('UPDATE shipments SET movement_started_at=$1,movement_duration_ms=$2,movement_start_location=$3,current_location=$3,status=$4,updated_at=$1 WHERE id=$5',
+      [startedAt,durationMs,startLocation,'In transit',s.id]);
+    const updated=await getShipmentById(s.id);
+    res.json({shipment:updated});
+  }catch(e){res.status(500).json({error:'Unable to start shipment movement'});}
 });
 
 app.delete('/api/admin/shipments/:id',async(req,res)=>{
