@@ -123,7 +123,8 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
   });
   loadLeaflet().then((L:any)=>{
    if(disposed||!mapRef.current)return;
-   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);\n   const routeStart=movementStartedAt?countryLatLon(movementStartLocation||current||origin):start;
+   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
+   const routeStart=movementStartedAt?countryLatLon(movementStartLocation||current||origin):start;
    // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
