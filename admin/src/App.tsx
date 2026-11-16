@@ -43,7 +43,9 @@ function App(){
   const [message,setMessage]=useState('');
   const [createdTracking,setCreatedTracking]=useState('');
   const [error,setError]=useState('');
-  const [freightNote,setFreightNote]=useState<Shipment|null>(null);\n  const [movementDurations,setMovementDurations]=useState<Record<string,number>>({});\n  const [startingMovement,setStartingMovement]=useState<string>('');
+  const [freightNote,setFreightNote]=useState<Shipment|null>(null);
+  const [movementDurations,setMovementDurations]=useState<Record<string,number>>({});
+  const [startingMovement,setStartingMovement]=useState<string>('');
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
   useEffect(()=>{void refresh().catch((e:any)=>setError(e?.message||'Could not load shipments.')).finally(()=>setLoading(false))},[]);
