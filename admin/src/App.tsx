@@ -22,7 +22,7 @@ type Shipment = {
   carrier:string; origin:string; destination:string; status:string; eta:string; events:EventItem[];
   createdAt:string; quantity?:number|string; country?:string; shippingMethod?:string; weight?:string;
   dimensions?:string; reference?:string; currentLocation?:string; deliveryInstructions?:string;
-  latitude?:number; longitude?:number; itemImages?:string[];
+  latitude?:number; longitude?:number; itemImages?:string[]; movementStartedAt?:string|null; movementDurationMs?:number|null; movementStartLocation?:string|null;
 };
 
 const STATUSES = ['All','Order received','Processing','Picked up','In transit','Arrived at facility','Customs clearance','Customs cleared','Departed facility','Arrived at destination','Out for delivery','Delivered','Delivery delayed','Delivery exception','Address issue','Customs hold','Shipment returned','Shipment cancelled'];
@@ -43,7 +43,7 @@ function App(){
   const [message,setMessage]=useState('');
   const [createdTracking,setCreatedTracking]=useState('');
   const [error,setError]=useState('');
-  const [freightNote,setFreightNote]=useState<Shipment|null>(null);
+  const [freightNote,setFreightNote]=useState<Shipment|null>(null);\n  const [movementDurations,setMovementDurations]=useState<Record<string,number>>({});\n  const [startingMovement,setStartingMovement]=useState<string>('');
 
   const refresh = async()=>{ const r=await api.get('/api/admin/shipments'); setShipments(r.data.shipments||[]); };
   useEffect(()=>{void refresh().catch((e:any)=>setError(e?.message||'Could not load shipments.')).finally(()=>setLoading(false))},[]);
@@ -86,6 +86,20 @@ function App(){
     }catch(e:any){setError(e?.message||'Could not save shipment.')}
   };
 
+  const startMovement=async(s:Shipment)=>{
+    const durationMinutes=movementDurations[s.id]||1440;
+    const startLocation=String(s.currentLocation||s.origin||'').trim();
+    if(!startLocation||!s.destination){setError('Add a current location and destination before starting the route.');return;}
+    if(!confirm('Start the public tracking-map animation for '+s.trackingNumber+'? The route will progress over the selected duration.'))return;
+    setStartingMovement(s.id);setError('');
+    try{
+      await api.post('/api/admin/shipments/'+s.id+'/start-movement',{durationMinutes,startLocation});
+      await refresh();
+      setMessage('Shipment route started. The public tracking map will show its progress.');
+    }catch(e:any){setError(e?.message||'Could not start shipment movement.')}
+    finally{setStartingMovement('')}
+  };
+
   const remove=async(s:Shipment)=>{
     if(!confirm('Delete '+s.trackingNumber+'?')) return;
     try{await api.delete('/api/admin/shipments/'+s.id);await refresh();setMessage('Tracking record deleted.')}
@@ -118,7 +132,16 @@ function App(){
           <div><strong>{s.trackingNumber}</strong><span>{s.customerName||'No name'} · {s.itemDescription}</span></div>
           <Status value={s.status}/>
           <div><span>{s.country||s.destination}</span><small>ETA {s.eta||'—'}</small></div>
-          <div className="row-actions"><button title="Generate freight note" className="freight-note-action" onClick={()=>setFreightNote(s)}>FN</button><button title="Edit" onClick={()=>setEditor(s)}>✎</button><button title="Delete" onClick={()=>void remove(s)}>×</button></div>
+          <div className="row-actions movement-row-actions">
+            <div className="movement-control">
+              <label htmlFor={'duration-'+s.id}>Route duration</label>
+              <select id={'duration-'+s.id} value={movementDurations[s.id]||1440} onChange={e=>setMovementDurations(x=>({...x,[s.id]:Number(e.target.value)}))}>
+                <option value={30}>30 minutes</option><option value={60}>1 hour</option><option value={360}>6 hours</option><option value={720}>12 hours</option><option value={1440}>1 day</option><option value={4320}>3 days</option><option value={10080}>7 days</option><option value={20160}>14 days</option><option value={43200}>30 days</option>
+              </select>
+              <button className="primary movement-start-button" disabled={startingMovement===s.id} onClick={()=>void startMovement(s)}>{startingMovement===s.id?'Starting…':s.movementStartedAt?'Restart route':'▶ Start movement'}</button>
+            </div>
+            <button title="Generate freight note" className="freight-note-action" onClick={()=>setFreightNote(s)}>FN</button><button title="Edit" onClick={()=>setEditor(s)}>✎</button><button title="Delete" onClick={()=>void remove(s)}>×</button>
+          </div>
         </div>)}
         {filtered.length===0&&<div className="empty"><strong>No tracking records found.</strong><p>Create a tracking number to get started.</p></div>}
       </div>
