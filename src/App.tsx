@@ -17,7 +17,7 @@ const openSupportChat=()=>{const crisp=(window as any).$crisp;if(crisp&&typeof c
 import { Search, Package, MapPin, Truck, CheckCircle2, Clock3, ShieldCheck, User, LogIn, LogOut, Plus, Pencil, Trash2, Headphones, RefreshCw, Menu, ChevronRight, X, LoaderCircle, Volume2, VolumeX } from 'lucide-react';
 
 type Event = { title:string; location:string; time:string; done?:boolean };
-type Shipment = { id?:string; tracking:string; customerName?:string; product:string; country?:string; quantity?:number; status:string; eta:string; origin:string; destination:string; carrier:string; shippingMethod?:string; weight?:string; dimensions?:string; reference?:string; currentLocation?:string; customerEmail?:string; lastUpdated?:string; proofOfDelivery?:string; deliveryInstructions?:string; itemImages?:string[]; documents?:{name:string;url:string}[]; events:Event[] };
+type Shipment = { id?:string; tracking:string; customerName?:string; product:string; country?:string; quantity?:number; status:string; eta:string; origin:string; destination:string; carrier:string; shippingMethod?:string; weight?:string; dimensions?:string; reference?:string; currentLocation?:string; customerEmail?:string; lastUpdated?:string; proofOfDelivery?:string; deliveryInstructions?:string; itemImages?:string[]; documents?:{name:string;url:string}[]; movementStartedAt?:string|null; movementDurationMs?:number|null; movementStartLocation?:string|null; events:Event[] };
 type Me = { userId:string; firstName?:string; lastName?:string; middleName?:string; username?:string; email?:string; phone?:string; country?:string; address?:string; city?:string; state?:string; postalCode?:string; role:'owner'|'customer' };
 const STATUSES=['All','Order received','Processing','Picked up','In transit','Arrived at facility','Customs clearance','Customs cleared','Departed facility','Arrived at destination','Out for delivery','Delivered','Delivery delayed','Delivery exception','Address issue','Customs hold','Shipment returned','Shipment cancelled'];
 
@@ -103,7 +103,7 @@ function ensureGlobe():Promise<any>{
   const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
  });
 }
-function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current:string;status:string}){
+function ShipmentGlobe({origin,destination,current,status,movementStartedAt,movementDurationMs,movementStartLocation}:{origin:string;destination:string;current:string;status:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
  const mapRef=useRef<HTMLDivElement|null>(null);
  const [mapError,setMapError]=useState(false);
  const nearby=nearbyCountryNames(origin,destination);
@@ -123,7 +123,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   });
   loadLeaflet().then((L:any)=>{
    if(disposed||!mapRef.current)return;
-   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
+   const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);\n   const routeStart=movementStartedAt?countryLatLon(movementStartLocation||current||origin):start;
    // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
@@ -135,26 +135,39 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,keyboard:true,title:destination}).addTo(map);
    destinationMarker.bindTooltip(safeTitle('Destination: '+destination),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).openTooltip();
    destinationMarker.bindPopup('<strong>Destination</strong><br/>'+safeTitle(destination));
-   const route=L.polyline([start,end],{color:'#5420a8',weight:5,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(map);
+   const route=L.polyline([routeStart,end],{color:'#5420a8',weight:5,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(map);
    const currentIcon=L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
-   if(current && current.toLowerCase()!==origin.toLowerCase() && current.toLowerCase()!==destination.toLowerCase()){
+   if(movementStartedAt && movementDurationMs && movementDurationMs>0){
+    const marker=L.marker(routeStart,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:'Package movement'}).addTo(map);
+    const label=marker.bindTooltip('Package in transit',{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
+    const started=Date.parse(movementStartedAt);
+    const updatePosition=()=>{
+     const progress=Math.max(0,Math.min(1,(Date.now()-started)/movementDurationMs));
+     marker.setLatLng([routeStart[0]+(end[0]-routeStart[0])*progress,routeStart[1]+(end[1]-routeStart[1])*progress]);
+     label.setContent(progress>=1?'Route animation complete':('Package in transit · '+Math.round(progress*100)+'%'));
+    };
+    updatePosition();
+    const movementTimer=window.setInterval(updatePosition,1000);
+    (map as any).__movementTimer=movementTimer;
+    marker.bindPopup('<strong>Shipment route progress</strong><br/>This marker follows the scheduled route animation. It is not live GPS.');
+   }else if(current && current.toLowerCase()!==origin.toLowerCase() && current.toLowerCase()!==destination.toLowerCase()){
     const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current}).addTo(map);
-    marker.bindTooltip(safeTitle('Current: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
-    marker.bindPopup('<strong>Latest reported location</strong><br/>'+safeTitle(current));
+    marker.bindTooltip(safeTitle('Current reported location: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
+    marker.bindPopup('<strong>Current reported location</strong><br/>'+safeTitle(current));
    }
-   if(Math.abs(start[0]-end[0])>0.01||Math.abs(start[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.28),{maxZoom:4,animate:false});
+   if(Math.abs(routeStart[0]-end[0])>0.01||Math.abs(routeStart[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.28),{maxZoom:4,animate:false});
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){map.remove();map=null}};
- },[origin,destination,current,nearbyKey]);
+  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){if((map as any).__movementTimer)window.clearInterval((map as any).__movementTimer);map.remove();map=null}};
+ },[origin,destination,current,nearbyKey,movementStartedAt,movementDurationMs,movementStartLocation]);
  return <div className="shipment-globe-card route-overview-card globe3d-card">
   <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Geographic route map with country borders, nearby countries, and a clearly marked latest location.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene parcel-street-map-scene">
    <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Road map focused on the latest reported shipment location ${current||origin}`}/>
    {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
-   <div className="globe-note route-map-note">Latest recorded location · approximate country-level position, not live GPS.</div>
+   <div className="globe-note route-map-note">Scheduled route progress · illustrative country-level movement, not live GPS.</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
   <div className="route-summary">
@@ -239,4 +252,4 @@ const Status=({value}:{value:string})=><span className={'status '+value.toLowerC
 const Info=({label,value}:{label:string;value:string})=><div><span>{label}</span><strong>{value||'—'}</strong></div>;
 const Feature=({icon,title,text}:{icon:any;title:string;text:string})=><div className="feature"><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div></div>;
 const Stat=({label,value}:{label:string;value:number})=><div className="stat"><span>{label}</span><strong>{value}</strong></div>;
-function RouteMap({shipment:s}:{shipment:Shipment}){const current=s.currentLocation||s.origin;return <div className="route-map"><div className="route-map-head"><div><span className="muted">SHIPMENT ROUTE</span><strong>Origin to destination</strong></div><span className="route-live"><i/> {s.status||'In transit'}</span></div><ShipmentGlobe origin={s.origin} destination={s.destination} current={current} status={s.status}/><div className="route-caption">The globe shows the illustrative country-to-country route. It is not live GPS tracking unless verified location coordinates are provided.</div></div>}
+function RouteMap({shipment:s}:{shipment:Shipment}){const current=s.currentLocation||s.origin;return <div className="route-map"><div className="route-map-head"><div><span className="muted">SHIPMENT ROUTE</span><strong>Origin to destination</strong></div><span className="route-live"><i/> {s.status||'In transit'}</span></div><ShipmentGlobe origin={s.origin} destination={s.destination} current={current} status={s.status} movementStartedAt={s.movementStartedAt} movementDurationMs={s.movementDurationMs} movementStartLocation={s.movementStartLocation}/><div className="route-caption">{s.movementStartedAt?'The marker follows the admin-scheduled route duration. This is an illustrative animation, not live GPS tracking.':'The map shows the last recorded location. Route movement begins when scheduled by the shipment administrator.'}</div></div>}
