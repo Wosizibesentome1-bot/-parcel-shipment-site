@@ -139,18 +139,18 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const currentIcon=L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
    if(movementStartedAt && movementDurationMs && movementDurationMs>0){
     const marker=L.marker(routeStart,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:'Package movement'}).addTo(map);
-    const label=marker.bindTooltip('Package in transit',{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
+    marker.bindTooltip('Package in transit',{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
     const started=Date.parse(movementStartedAt);
     const updatePosition=()=>{
      const progress=Math.max(0,Math.min(1,(Date.now()-started)/movementDurationMs));
      marker.setLatLng([routeStart[0]+(end[0]-routeStart[0])*progress,routeStart[1]+(end[1]-routeStart[1])*progress]);
-     label.setContent(progress>=1?'Route animation complete':('Package in transit · '+Math.round(progress*100)+'%'));
+     marker.getTooltip()?.setContent(progress>=1?'Route animation complete':('Package in transit · '+Math.round(progress*100)+'%'));
     };
     updatePosition();
     const movementTimer=window.setInterval(updatePosition,1000);
     (map as any).__movementTimer=movementTimer;
     marker.bindPopup('<strong>Shipment route progress</strong><br/>This marker follows the scheduled route animation. It is not live GPS.');
-   }else if(current && current.toLowerCase()!==origin.toLowerCase() && current.toLowerCase()!==destination.toLowerCase()){
+   }else{
     const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current}).addTo(map);
     marker.bindTooltip(safeTitle('Current reported location: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
     marker.bindPopup('<strong>Current reported location</strong><br/>'+safeTitle(current));
