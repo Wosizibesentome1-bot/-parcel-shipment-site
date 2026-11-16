@@ -222,6 +222,7 @@ function publicShipment(s){
     events:(s.events||[]).map((e,i)=>({title:e.status,location:e.location,time:e.date,done:i<(s.events||[]).length-1||s.status==='Delivered'})),
     itemImages:Array.isArray(s.itemImages)?s.itemImages:[],
     deliveryInstructions:s.deliveryInstructions,
+    movementStartedAt:s.movementStartedAt||null,movementDurationMs:s.movementDurationMs||null,movementStartLocation:s.movementStartLocation||null,
     proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined
   };
 }
