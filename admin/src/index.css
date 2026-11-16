@@ -60,3 +60,12 @@ footer{max-width:1240px;margin:auto;padding:42px 24px 45px;color:#666;font-size:
 .freight-note-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}
 @media(max-width:600px){.freight-note-card{padding:20px 14px}.freight-note-top{flex-direction:column}.freight-note-number{text-align:left}.freight-note-grid{grid-template-columns:1fr}.freight-note-table{font-size:10px}.freight-note-table th,.freight-note-table td{padding:7px 5px}.freight-note-table th{width:20%}.freight-note-table td{width:30%}}
 @media print{ @page{size:A4;margin:12mm} body *{visibility:hidden!important} #freight-note-print,#freight-note-print *{visibility:visible!important} #freight-note-print{position:absolute!important;inset:0 auto auto 0!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important} .no-print{display:none!important} .freight-note-backdrop{position:static!important;display:block!important;background:#fff!important;padding:0!important;overflow:visible!important} .freight-note-table tr,.freight-note-grid>div{break-inside:avoid} }
+
+
+/* Timed shipment movement controls */
+.movement-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.movement-control{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:9px 10px;border:1px solid #dce7ef;border-radius:10px;background:#f7fafc}
+.movement-control label{font-size:10px;font-weight:800;color:#526779;white-space:nowrap}
+.movement-control select{min-width:112px;padding:7px 8px;border:1px solid #d3e0e9;border-radius:7px;background:#fff;color:#20384c;font-size:11px}
+.movement-start-button{white-space:nowrap;font-size:11px!important;padding:8px 10px!important}
+@media(max-width:760px){.movement-row-actions{grid-column:1/-1;justify-content:flex-start}.movement-control{width:100%}.movement-control select{flex:1;min-width:105px}}
