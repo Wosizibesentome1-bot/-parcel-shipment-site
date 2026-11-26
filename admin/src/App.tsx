@@ -60,7 +60,7 @@ function App(){
 
   const saveShipment=async(form:any,existing:Shipment|null)=>{
     const trackingNumber=String(form.trackingNumber||generateTrackingNumber()).trim().toUpperCase();
-    const destination=String(form.destination||form.country||existing?.destination||'').trim();
+    const destination=String(form.country||form.destination||existing?.destination||'').trim();
     const customerName=String(form.customerName||existing?.customerName||'').trim();
     const itemDescription=String(form.itemDescription||existing?.itemDescription||'').trim();
     try{
@@ -68,7 +68,7 @@ function App(){
         ...form,
         customerName,
         itemDescription,
-        country:String(form.country||destination).trim(),
+        country:destination,
         destination,
         trackingNumber,
         currentLatitude:form.latitude ?? form.currentLatitude ?? null,
@@ -190,12 +190,12 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
     <div className="form-grid">
       <label>Customer name<input value={form.customerName||''} onChange={e=>set('customerName',e.target.value)} placeholder="Full name"/></label>
       <label>Product<input value={form.itemDescription||''} onChange={e=>set('itemDescription',e.target.value)} placeholder="Product name"/></label>
-      <label>Destination country<input value={form.country||''} onChange={e=>set('country',e.target.value)} placeholder="Country"/></label>
+      <label>Destination country<input value={form.country||''} onChange={e=>{set('country',e.target.value);set('destination',e.target.value)}} placeholder="Country"/></label>
       <label>Tracking number<input value={form.trackingNumber||''} onChange={e=>set('trackingNumber',e.target.value)} placeholder="PT10004"/></label>
       <label>Quantity<input type="number" min="1" value={form.quantity??1} onChange={e=>set('quantity',e.target.value)}/></label>
       <label>Estimated delivery<input type="date" value={form.eta||''} onChange={e=>set('eta',e.target.value)}/></label>
       <label>Origin<input value={form.origin||''} onChange={e=>set('origin',e.target.value)}/></label>
-      <label>Destination<input value={form.destination||''} onChange={e=>set('destination',e.target.value)}/></label>
+      <label>Destination<input value={form.destination||''} onChange={e=>{set('destination',e.target.value);set('country',e.target.value)}}/></label>
       <label>Carrier<input value={form.carrier||''} onChange={e=>set('carrier',e.target.value)}/></label>
       <label>Shipping method<input value={form.shippingMethod||''} onChange={e=>set('shippingMethod',e.target.value)}/></label>
       <label>Package weight<input value={form.weight||''} onChange={e=>set('weight',e.target.value)}/></label>
