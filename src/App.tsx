@@ -148,7 +148,7 @@ function ensureGlobe():Promise<any>{
 function ShipmentGlobe({origin,destination,current,status,movementStartedAt,movementDurationMs,movementStartLocation}:{origin:string;destination:string;current:string;status:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
  const mapRef=useRef<HTMLDivElement|null>(null),mapInstance=useRef<any>(null),baseLayer=useRef<any>(null),labelLayer=useRef<any>(null);
  const [mapError,setMapError]=useState(false),[mapStyle,setMapStyle]=useState<'satellite'|'map'>('satellite');
- const countryName=(place:string)=>{const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ')};
+ const countryName=(place:string)=>{const raw=(place||'').toLowerCase();if(raw.includes('ramsberg')||raw.includes('finnvägen')||raw.includes('finnvagen')||raw.includes('sweden'))return 'Sweden';const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};const known=COUNTRY_COORDS[key]||Object.keys(COUNTRY_COORDS).includes(key);if(known)return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ');return (place||'Location not available').split(',').pop()?.trim()||'Location not available'};
  useEffect(()=>{
   let disposed=false,resizeHandler:(()=>void)|null=null,map:any=null;
   const load=()=>new Promise<any>((resolve,reject)=>{const w=window as any;if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}if(w.L){resolve(w.L);return}const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Leaflet failed'));document.head.appendChild(script)});
@@ -162,16 +162,16 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const labels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,opacity:.98});
    baseLayer.current={satellite,street};labelLayer.current=labels;satellite.addTo(map);labels.addTo(map);
    const safe=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-   const pin=(color:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin" style="background:'+color+'"><i></i></span>',iconSize:[44,56],iconAnchor:[22,53]});
+   const pin=(color:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin" style="background:'+color+'"><i></i></span>',iconSize:[30,40],iconAnchor:[15,38]});
    const originName=countryName(origin),destName=countryName(destination);
-   L.marker(a,{icon:pin('#13b94f'),zIndexOffset:900}).addTo(map).bindTooltip(safe(originName),{permanent:true,direction:'right',offset:[16,-18],className:'parcel-country-label'});
-   L.marker(b,{icon:pin('#ef2929'),zIndexOffset:950}).addTo(map).bindTooltip(safe(destName),{permanent:true,direction:'right',offset:[16,-18],className:'parcel-country-label'});
-   const route=L.polyline([a,b],{color:'#ffffff',weight:4,opacity:.98,dashArray:'12 10',lineCap:'round'}).addTo(map);
+   L.marker(a,{icon:pin('#13b94f'),zIndexOffset:900}).addTo(map).bindTooltip(safe(originName),{permanent:true,direction:'auto',offset:[10,-12],className:'parcel-country-label'});
+   L.marker(b,{icon:pin('#ef2929'),zIndexOffset:950}).addTo(map).bindTooltip(safe(destName),{permanent:true,direction:'auto',offset:[10,-12],className:'parcel-country-label'});
+   const route=L.polyline([a,b],{color:'#ffffff',weight:3,opacity:.98,dashArray:'9 8',lineCap:'round'}).addTo(map);
    const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-   L.marker(mid,{icon:L.divIcon({className:'parcel-plane-icon',html:'✈',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
-   const bounds=L.latLngBounds([a,b]);map.fitBounds(bounds,{padding:[95,95],maxZoom:3.5,animate:false});
+   L.marker(mid,{icon:L.divIcon({className:'parcel-plane-icon',html:'✈',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);
+   const bounds=L.latLngBounds([a,b]);map.fitBounds(bounds,{padding:[55,55],maxZoom:2.8,animate:false});
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
-   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(bounds,{padding:[95,95],maxZoom:3.5,animate:false})}},350);
+   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(bounds,{padding:[55,55],maxZoom:2.8,animate:false})}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
   return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove()}mapInstance.current=null;baseLayer.current=null;labelLayer.current=null};
  },[origin,destination]);
