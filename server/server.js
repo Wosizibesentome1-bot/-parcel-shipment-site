@@ -124,7 +124,8 @@ async function initDb(){
     ADD COLUMN IF NOT EXISTS movement_started_at TIMESTAMPTZ,
     ADD COLUMN IF NOT EXISTS movement_duration_ms BIGINT,
     ADD COLUMN IF NOT EXISTS movement_start_location TEXT,
-    ADD COLUMN IF NOT EXISTS home_address TEXT
+    ADD COLUMN IF NOT EXISTS home_address TEXT,
+    ADD COLUMN IF NOT EXISTS show_home_address_public BOOLEAN NOT NULL DEFAULT FALSE
   `);
   await pool.query('CREATE INDEX IF NOT EXISTS shipments_tracking_idx ON shipments (UPPER(tracking_number))');
   const count=(await pool.query('SELECT COUNT(*)::int AS count FROM shipments')).rows[0].count;
@@ -143,7 +144,7 @@ function rowToShipment(r){
     itemDescription:r.item_description,carrier:r.carrier,origin:r.origin,destination:r.destination,status:r.status,
     eta:r.eta,shippingMethod:r.shipping_method,weight:r.weight,reference:r.reference,currentLocation:r.current_location,
     currentLatitude:r.current_latitude,currentLongitude:r.current_longitude,quantity:r.quantity,
-    homeAddress:r.home_address||'',
+    homeAddress:r.home_address||'',showHomeAddressPublic:Boolean(r.show_home_address_public),
     packageDimensions:r.package_dimensions,deliveryInstructions:r.delivery_instructions,itemImages:r.item_images||[],
     events:r.events||[],movementStartedAt:r.movement_started_at?.toISOString?.()||r.movement_started_at||null,movementDurationMs:r.movement_duration_ms==null?null:Number(r.movement_duration_ms),movementStartLocation:r.movement_start_location||null,createdAt:r.created_at?.toISOString?.()||r.created_at,updatedAt:r.updated_at?.toISOString?.()||r.updated_at
   };
@@ -154,13 +155,13 @@ async function saveShipment(s){
     INSERT INTO shipments (
       id,tracking_number,customer_name,customer_email,item_description,carrier,origin,destination,status,eta,
       shipping_method,weight,reference,current_location,current_latitude,current_longitude,quantity,
-      package_dimensions,delivery_instructions,home_address,item_images,events,created_at,updated_at
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+      package_dimensions,delivery_instructions,home_address,show_home_address_public,item_images,events,created_at,updated_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
   `,[
     s.id,s.trackingNumber,s.customerName,s.customerEmail||null,s.itemDescription,s.carrier||null,s.origin,s.destination,
     s.status||'Order received',s.eta||null,s.shippingMethod||'Standard',s.weight||null,s.reference||null,
     s.currentLocation||null,s.currentLatitude??null,s.currentLongitude??null,s.quantity??null,
-    s.packageDimensions||null,s.deliveryInstructions||null,s.homeAddress||null,JSON.stringify(s.itemImages||[]),JSON.stringify(s.events||[]),
+    s.packageDimensions||null,s.deliveryInstructions||null,s.homeAddress||null,Boolean(s.showHomeAddressPublic),JSON.stringify(s.itemImages||[]),JSON.stringify(s.events||[]),
     s.createdAt||now(),s.updatedAt||null
   ]);
 }
@@ -226,7 +227,7 @@ function publicShipment(s,includeHomeAddress=false){
     deliveryInstructions:s.deliveryInstructions,
     movementStartedAt:s.movementStartedAt||null,movementDurationMs:s.movementDurationMs||null,movementStartLocation:s.movementStartLocation||null,
     proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined,
-    ...(includeHomeAddress&&s.homeAddress?{homeAddress:s.homeAddress}:{})
+    ...(s.showHomeAddressPublic&&s.homeAddress?{homeAddress:s.homeAddress}:{})
   };
 }
 
@@ -288,12 +289,12 @@ app.put('/api/admin/shipments/:id',async(req,res)=>{
       UPDATE shipments SET tracking_number=$1,customer_name=$2,customer_email=$3,item_description=$4,carrier=$5,
       origin=$6,destination=$7,status=$8,eta=$9,shipping_method=$10,weight=$11,reference=$12,current_location=$13,
       current_latitude=$14,current_longitude=$15,quantity=$16,package_dimensions=$17,delivery_instructions=$18,
-      home_address=$19,item_images=$20,events=$21,updated_at=$22 WHERE id=$23
+      home_address=$19,show_home_address_public=$20,item_images=$21,events=$22,updated_at=$23 WHERE id=$24
     `,[
       next.trackingNumber,next.customerName,next.customerEmail||null,next.itemDescription,next.carrier||null,next.origin,next.destination,
       next.status||'Order received',next.eta||null,next.shippingMethod||'Standard',next.weight||null,next.reference||null,
       next.currentLocation||null,next.currentLatitude??null,next.currentLongitude??null,next.quantity??null,
-      next.packageDimensions||null,next.deliveryInstructions||null,next.homeAddress||null,JSON.stringify(next.itemImages||[]),JSON.stringify(next.events||[]),
+      next.packageDimensions||null,next.deliveryInstructions||null,next.homeAddress||null,Boolean(next.showHomeAddressPublic),JSON.stringify(next.itemImages||[]),JSON.stringify(next.events||[]),
       next.updatedAt,next.id
     ]);
     res.json({shipment:await getShipmentById(next.id)});
@@ -340,13 +341,7 @@ app.get('/api/shipments/:tracking',async(req,res)=>{
   try{
     const s=await getShipmentByTracking(req.params.tracking);
     if(!s)return res.status(404).json({error:'Tracking number not found'});
-    const customer=await getCustomerBySession(req);
-    let includeHomeAddress=false;
-    if(customer){
-      const linked=await pool.query('SELECT 1 FROM customer_tracking WHERE customer_id=$1 AND shipment_id=$2 LIMIT 1',[customer.id,s.id]);
-      includeHomeAddress=Boolean(linked.rows[0]);
-    }
-    res.json({shipment:publicShipment(s,includeHomeAddress)});
+    res.json({shipment:publicShipment(s)});
   }catch(e){res.status(500).json({error:'Unable to load tracking information'});}
 });
 
@@ -408,7 +403,7 @@ app.get('/api/my-shipments',async(req,res)=>{
       SELECT s.* FROM shipments s JOIN customer_tracking ct ON ct.shipment_id=s.id
       WHERE ct.customer_id=$1 ORDER BY s.created_at DESC
     `,[customer.id]);
-    res.json({shipments:rows.map(rowToShipment).map(s=>publicShipment(s,true))});
+    res.json({shipments:rows.map(rowToShipment).map(s=>publicShipment(s))});
   }catch(e){res.status(500).json({error:'Unable to load shipments'});}
 });
 app.post('/api/support/tickets',(req,res)=>res.status(201).json({ticketId:crypto.randomUUID()}));
