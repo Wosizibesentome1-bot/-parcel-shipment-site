@@ -86,7 +86,18 @@ const COUNTRY_NEIGHBORS:Record<string,string[]> = {
  'argentina':['Chile','Bolivia','Paraguay','Brazil','Uruguay'], 'brazil':['Argentina','Bolivia','Colombia','Peru','Venezuela','Guyana','Suriname','Uruguay','Paraguay'],
  'colombia':['Panama','Venezuela','Brazil','Peru','Ecuador'], 'chile':['Peru','Bolivia','Argentina'], 'peru':['Ecuador','Colombia','Brazil','Bolivia','Chile']
 };
-function resolveCountry(place:string){const key=(place||'').toLowerCase().replace(/\s+/g,' ').trim();return Object.keys(COUNTRY_COORDS).sort((a,b)=>b.length-a.length).find(name=>key===name||key.includes(name))||key;}
+function normalizeCountryQuery(place:string){
+ const key=(place||'').toLowerCase().replace(/[.,]/g,' ').replace(/\s+/g,' ').trim();
+ const aliases:Record<string,string>={'usa':'united states','us':'united states','u s a':'united states','united states of america':'united states','america':'united states','uk':'united kingdom','u k':'united kingdom','uae':'united arab emirates'};
+ return aliases[key]||key;
+}
+function resolveCountry(place:string){
+ const key=normalizeCountryQuery(place);
+ if(COUNTRY_COORDS[key])return key;
+ // Only match full country names inside longer city/address strings; short codes
+ // such as "us" must never match unrelated names like Houston.
+ return Object.keys(COUNTRY_COORDS).filter(name=>name.length>3).sort((a,b)=>b.length-a.length).find(name=>key.includes(name))||key;
+}
 function nearbyCountryNames(origin:string,destination:string){const originKey=resolveCountry(origin),destinationKey=resolveCountry(destination);const excluded=[originKey,destinationKey,origin.toLowerCase(),destination.toLowerCase()];const names=[...(COUNTRY_NEIGHBORS[originKey]||[]),...(COUNTRY_NEIGHBORS[destinationKey]||[])];return [...new Set(names)].filter(name=>!excluded.some(key=>key&&name.toLowerCase()===key)).slice(0,10);}
 function countryLatLon(place:string):[number,number]{
  const key=(place||'').toLowerCase().replace(/\\s+/g,' ').trim();
@@ -101,10 +112,17 @@ function countryLatLon(place:string):[number,number]{
 // Resolve city, airport, street or country names to published map coordinates.
 // If a precise match is unavailable, retain the country-level fallback and disclose it.
 // Display the resolved country name directly on each shipment route pin.
-function countryDisplayName(place:string){const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States','united states of america':'United States',uk:'United Kingdom',uae:'United Arab Emirates','cote d ivoire':'Côte d’Ivoire'};return aliases[key]||key.split(' ').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' ');}
+function countryDisplayName(place:string){const key=resolveCountry(place);const aliases:Record<string,string>={'united states':'United States','united kingdom':'United Kingdom','united arab emirates':'United Arab Emirates','cote d ivoire':'Côte d’Ivoire'};return aliases[key]||key.split(' ').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' ');}
 async function resolveMapPlace(place:string):Promise<{coords:[number,number];precise:boolean;label:string;country:string}>{
  const query=(place||'').trim();
  if(!query)return {coords:[20,0],precise:false,label:'Location not supplied',country:'Unknown'};
+ // Country-only inputs use our fixed country centroid, not a fuzzy geocoder result.
+ // This prevents a search for "USA" from resolving to an unrelated place with that name.
+ const normalizedCountry=normalizeCountryQuery(query);
+ if(COUNTRY_COORDS[normalizedCountry]){
+  const [lat,lon]=COUNTRY_COORDS[normalizedCountry];
+  return {coords:[lat,lon],precise:false,label:countryDisplayName(normalizedCountry),country:countryDisplayName(normalizedCountry)};
+ }
  try{
   const url='https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=1&lang=en';
   const response=await fetch(url,{headers:{'Accept':'application/json'}});
