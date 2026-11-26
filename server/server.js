@@ -215,7 +215,7 @@ async function getShipmentByTracking(tracking){
   return rows[0]?rowToShipment(rows[0]):null;
 }
 
-function publicShipment(s){
+function publicShipment(s,includeHomeAddress=false){
   return {
     id:s.id,tracking:s.trackingNumber,customerName:s.customerName,product:s.itemDescription,country:s.destination,
     status:s.status,eta:s.eta,origin:s.origin,destination:s.destination,carrier:s.carrier,shippingMethod:s.shippingMethod||'Standard',
@@ -225,7 +225,8 @@ function publicShipment(s){
     itemImages:Array.isArray(s.itemImages)?s.itemImages:[],
     deliveryInstructions:s.deliveryInstructions,
     movementStartedAt:s.movementStartedAt||null,movementDurationMs:s.movementDurationMs||null,movementStartLocation:s.movementStartLocation||null,
-    proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined
+    proofOfDelivery:s.status==='Delivered'?'Delivered to recipient at destination.':undefined,
+    ...(includeHomeAddress&&s.homeAddress?{homeAddress:s.homeAddress}:{})
   };
 }
 
@@ -339,7 +340,13 @@ app.get('/api/shipments/:tracking',async(req,res)=>{
   try{
     const s=await getShipmentByTracking(req.params.tracking);
     if(!s)return res.status(404).json({error:'Tracking number not found'});
-    res.json({shipment:publicShipment(s)});
+    const customer=await getCustomerBySession(req);
+    let includeHomeAddress=false;
+    if(customer){
+      const linked=await pool.query('SELECT 1 FROM customer_tracking WHERE customer_id=$1 AND shipment_id=$2 LIMIT 1',[customer.id,s.id]);
+      includeHomeAddress=Boolean(linked.rows[0]);
+    }
+    res.json({shipment:publicShipment(s,includeHomeAddress)});
   }catch(e){res.status(500).json({error:'Unable to load tracking information'});}
 });
 
@@ -401,7 +408,7 @@ app.get('/api/my-shipments',async(req,res)=>{
       SELECT s.* FROM shipments s JOIN customer_tracking ct ON ct.shipment_id=s.id
       WHERE ct.customer_id=$1 ORDER BY s.created_at DESC
     `,[customer.id]);
-    res.json({shipments:rows.map(rowToShipment).map(publicShipment)});
+    res.json({shipments:rows.map(rowToShipment).map(s=>publicShipment(s,true))});
   }catch(e){res.status(500).json({error:'Unable to load shipments'});}
 });
 app.post('/api/support/tickets',(req,res)=>res.status(201).json({ticketId:crypto.randomUUID()}));
