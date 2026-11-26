@@ -155,7 +155,7 @@ function ShipmentGlobe({origin,destination}:{origin:string;destination:string;cu
   load().then((L:any)=>{if(disposed||!mapRef.current)return;
    map=L.map(mapRef.current,{zoomControl:true,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,zoomSnap:0.25,zoomDelta:0.5,minZoom:1,maxZoom:8}).setView([20,0],1);
    mapInstance.current=map;
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors',maxZoom:8}).addTo(map);
+   L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:8}).addTo(map);
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
    setTimeout(()=>{if(!disposed){map.invalidateSize();map.setView([20,0],1,false)}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
