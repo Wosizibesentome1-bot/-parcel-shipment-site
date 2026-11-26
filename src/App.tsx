@@ -98,6 +98,24 @@ function countryLatLon(place:string):[number,number]{
  if(!found){const entry=Object.entries(COUNTRY_COORDS).sort(([a],[b])=>b.length-a.length).find(([name])=>key.includes(name));found=entry?.[1]}
  return found||[20,0];
 }
+// Sample a great-circle corridor so international routes follow the curvature of the earth
+// rather than drawing an unrealistic straight line through latitude/longitude space.
+function greatCircleRoute(start:[number,number],end:[number,number],steps=96):[number,number][]{
+ const rad=Math.PI/180,deg=180/Math.PI;
+ const toVec=([lat,lon]:[number,number])=>{const p=lat*rad,l=lon*rad;return [Math.cos(p)*Math.cos(l),Math.cos(p)*Math.sin(l),Math.sin(p)] as [number,number,number]};
+ const a=toVec(start),b=toVec(end),dot=Math.max(-1,Math.min(1,a[0]*b[0]+a[1]*b[1]+a[2]*b[2]));
+ const omega=Math.acos(dot),sinOmega=Math.sin(omega),points:[number,number][]=[];
+ for(let i=0;i<=steps;i++){
+  const t=i/steps;
+  let x:number,y:number,z:number;
+  if(omega<1e-7){x=a[0]*(1-t)+b[0]*t;y=a[1]*(1-t)+b[1]*t;z=a[2]*(1-t)+b[2]*t}
+  else{const wa=Math.sin((1-t)*omega)/sinOmega,wb=Math.sin(t*omega)/sinOmega;x=wa*a[0]+wb*b[0];y=wa*a[1]+wb*b[1];z=wa*a[2]+wb*b[2]}
+  const lat=Math.atan2(z,Math.sqrt(x*x+y*y))*deg;
+  const lon=Math.atan2(y,x)*deg;
+  points.push([lat,lon]);
+ }
+ return points;
+}
 function ensureGlobe():Promise<any>{
  return new Promise((resolve,reject)=>{
   const w=window as any;
@@ -129,7 +147,9 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    if(disposed||!mapRef.current)return;
    const start=countryLatLon(origin),end=countryLatLon(destination),now=countryLatLon(current||origin);
    const routeStart=movementStartedAt?countryLatLon(movementStartLocation||current||origin):start;
-   // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
+   // Locations are country/city-level estimates; the corridor is an illustrative great-circle route,
+   // not a carrier's verified road, vessel, aircraft or live GPS path.
+   const routePoints=greatCircleRoute(routeStart,end,120);
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
    const mapLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
    const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:19});
@@ -170,7 +190,8 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,keyboard:true,title:destination}).addTo(map);
    destinationMarker.bindTooltip(safeTitle('Destination: '+destination),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).openTooltip();
    destinationMarker.bindPopup('<strong>Destination</strong><br/>'+safeTitle(destination));
-   const route=L.polyline([routeStart,end],{color:'#5420a8',weight:5,opacity:.95,lineCap:'round',lineJoin:'round'}).addTo(map);
+   L.polyline(routePoints,{color:'#9a7bd0',weight:10,opacity:.22,lineCap:'round',lineJoin:'round'}).addTo(map);
+   const route=L.polyline(routePoints,{color:'#5420a8',weight:4,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(map);
    const currentIcon=L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
    if(movementStartedAt && movementDurationMs && movementDurationMs>0){
     const marker=L.marker(routeStart,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:'Package movement'}).addTo(map);
@@ -178,7 +199,8 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
     const started=Date.parse(movementStartedAt);
     const updatePosition=()=>{
      const progress=Math.max(0,Math.min(1,(Date.now()-started)/movementDurationMs));
-     marker.setLatLng([routeStart[0]+(end[0]-routeStart[0])*progress,routeStart[1]+(end[1]-routeStart[1])*progress]);
+     const routeIndex=Math.min(routePoints.length-1,Math.round(progress*(routePoints.length-1)));
+     marker.setLatLng(routePoints[routeIndex]);
      marker.getTooltip()?.setContent(progress>=1?'Route animation complete':('Package in transit · '+Math.round(progress*100)+'%'));
     };
     updatePosition();
@@ -190,7 +212,7 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
     marker.bindTooltip(safeTitle('Current reported location: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
     marker.bindPopup('<strong>Current reported location</strong><br/>'+safeTitle(current));
    }
-   if(Math.abs(routeStart[0]-end[0])>0.01||Math.abs(routeStart[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.28),{maxZoom:4,animate:false});
+   if(Math.abs(routeStart[0]-end[0])>0.01||Math.abs(routeStart[1]-end[1])>0.01)map.fitBounds(route.getBounds().pad(0.18),{maxZoom:5,animate:false});
    resizeHandler=()=>map&&map.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
@@ -198,11 +220,11 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
   return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){if((map as any).__movementTimer)window.clearInterval((map as any).__movementTimer);map.remove();map=null}};
  },[origin,destination,current,nearbyKey,movementStartedAt,movementDurationMs,movementStartLocation]);
  return <div className="shipment-globe-card route-overview-card globe3d-card">
-  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Geographic route map with country borders, nearby countries, and a clearly marked latest location.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
+  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Interactive world map with an illustrative international corridor across land and sea, nearby country labels and shipment markers.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
   <div className="globe-scene route-map-scene parcel-street-map-scene">
    <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Road map focused on the latest reported shipment location ${current||origin}`}/>
    {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
-   <div className="globe-note route-map-note">Scheduled route progress · illustrative country-level movement, not live GPS.</div>
+   <div className="globe-note route-map-note">Illustrative great-circle corridor · not verified carrier routing or live GPS.</div>
   </div>
   <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
   <div className="route-summary">
