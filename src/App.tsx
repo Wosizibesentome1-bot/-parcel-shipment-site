@@ -94,8 +94,10 @@ function normalizeCountryQuery(place:string){
 function resolveCountry(place:string){
  const key=normalizeCountryQuery(place);
  if(COUNTRY_COORDS[key])return key;
- // Only match full country names inside longer city/address strings; short codes
- // such as "us" must never match unrelated names like Houston.
+ // Match explicit country names or country abbreviations in a longer address.
+ if(/(^|[^a-z])(usa|u\\.?s\\.?a\\.?|united states of america)([^a-z]|$)/i.test(place))return 'united states';
+ if(/(^|[^a-z])(uk|u\\.?k\\.?)([^a-z]|$)/i.test(place))return 'united kingdom';
+ if(/(^|[^a-z])uae([^a-z]|$)/i.test(place))return 'united arab emirates';
  return Object.keys(COUNTRY_COORDS).filter(name=>name.length>3).sort((a,b)=>b.length-a.length).find(name=>key.includes(name))||key;
 }
 function nearbyCountryNames(origin:string,destination:string){const originKey=resolveCountry(origin),destinationKey=resolveCountry(destination);const excluded=[originKey,destinationKey,origin.toLowerCase(),destination.toLowerCase()];const names=[...(COUNTRY_NEIGHBORS[originKey]||[]),...(COUNTRY_NEIGHBORS[destinationKey]||[])];return [...new Set(names)].filter(name=>!excluded.some(key=>key&&name.toLowerCase()===key)).slice(0,10);}
@@ -116,12 +118,11 @@ function countryDisplayName(place:string){const key=resolveCountry(place);const 
 async function resolveMapPlace(place:string):Promise<{coords:[number,number];precise:boolean;label:string;country:string}>{
  const query=(place||'').trim();
  if(!query)return {coords:[20,0],precise:false,label:'Location not supplied',country:'Unknown'};
- // Country-only inputs use our fixed country centroid, not a fuzzy geocoder result.
- // This prevents a search for "USA" from resolving to an unrelated place with that name.
- const normalizedCountry=normalizeCountryQuery(query);
- if(COUNTRY_COORDS[normalizedCountry]){
-  const [lat,lon]=COUNTRY_COORDS[normalizedCountry];
-  return {coords:[lat,lon],precise:false,label:countryDisplayName(normalizedCountry),country:countryDisplayName(normalizedCountry)};
+ const intendedCountry=resolveCountry(query);
+ // Country-only entries must use the fixed centroid, never a fuzzy geocoder.
+ if(COUNTRY_COORDS[intendedCountry] && query.toLowerCase().replace(/[.,]/g,' ').replace(/\\s+/g,' ').trim()===normalizeCountryQuery(query)){
+  const [lat,lon]=COUNTRY_COORDS[intendedCountry];
+  return {coords:[lat,lon],precise:false,label:countryDisplayName(intendedCountry),country:countryDisplayName(intendedCountry)};
  }
  try{
   const url='https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=1&lang=en';
@@ -131,11 +132,20 @@ async function resolveMapPlace(place:string):Promise<{coords:[number,number];pre
    const feature=data?.features?.[0],coordinates=feature?.geometry?.coordinates;
    if(Array.isArray(coordinates)&&coordinates.length>=2&&Number.isFinite(coordinates[0])&&Number.isFinite(coordinates[1])){
     const props=feature.properties||{};
-    const label=[props.name,props.city,props.state,props.country].filter(Boolean).filter((v:string,i:number,a:string[])=>a.indexOf(v)===i).join(', ');
-    return {coords:[Number(coordinates[1]),Number(coordinates[0])],precise:true,label:label||query,country:props.country||countryDisplayName(query)};
+    const geocodedCountry=normalizeCountryQuery(props.country||'');
+    // Never accept a fuzzy result in a different country from the country explicitly
+    // supplied in the shipment address (e.g. USA must not become Venezuela).
+    if(!COUNTRY_COORDS[intendedCountry] || !geocodedCountry || geocodedCountry===intendedCountry){
+     const label=[props.name,props.city,props.state,props.country].filter(Boolean).filter((v:string,i:number,a:string[])=>a.indexOf(v)===i).join(', ');
+     return {coords:[Number(coordinates[1]),Number(coordinates[0])],precise:true,label:label||query,country:countryDisplayName(intendedCountry)||props.country||countryDisplayName(query)};
+    }
    }
   }
  }catch{}
+ if(COUNTRY_COORDS[intendedCountry]){
+  const [lat,lon]=COUNTRY_COORDS[intendedCountry];
+  return {coords:[lat,lon],precise:false,label:countryDisplayName(intendedCountry),country:countryDisplayName(intendedCountry)};
+ }
  return {coords:countryLatLon(query),precise:false,label:query,country:countryDisplayName(query)};
 }
 // Sample a great-circle corridor so international routes follow the curvature of the earth
