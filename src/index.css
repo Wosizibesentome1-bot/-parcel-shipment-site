@@ -293,3 +293,46 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .shipment-map-flight span{height:2px;flex:1;background:#9aaccb}
 .shipment-map-flight b{font-size:32px;line-height:1}
 @media(max-width:650px){.route-map{padding:16px 12px 0!important}.route-map-head{padding:0 4px 14px!important}.route-map-head>div strong{font-size:21px!important}.route-live{font-size:12px!important;padding:9px 12px!important}.shipment-map-canvas{height:440px;min-height:440px}.shipment-map-style{left:10px;top:10px}.shipment-map-style button{padding:10px 12px;font-size:13px}.shipment-map-controls{right:9px;gap:7px}.shipment-map-controls button{width:42px;height:42px;font-size:23px}.shipment-map-summary{grid-template-columns:1fr 44px 1fr;gap:6px;padding:16px 12px;min-height:90px}.shipment-map-place{gap:8px}.summary-pin{width:32px;height:32px;flex-basis:32px}.summary-pin:after{width:10px;height:10px}.shipment-map-place small{font-size:11px}.shipment-map-place strong{font-size:13px}.shipment-map-flight{gap:3px}.shipment-map-flight b{font-size:22px}.parcel-country-label{font-size:12px!important;padding:4px 6px!important}}
+
+
+/* Full-width shipment route card to match the approved reference layout */
+@media(min-width:0px){
+  .reference-style .route-map{
+    width:100vw!important;
+    max-width:none!important;
+    margin-left:calc(50% - 50vw)!important;
+    margin-right:calc(50% - 50vw)!important;
+    padding:14px 10px 0!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    overflow:visible!important;
+  }
+  .reference-style .route-map-head{
+    max-width:none!important;
+    padding:0 10px 14px!important;
+  }
+  .reference-style .route-map-head>div strong{font-size:clamp(19px,2.8vw,25px)!important}
+  .reference-style .route-live{font-size:12px!important;padding:8px 13px!important}
+  .shipment-map-design{
+    width:100%!important;
+    border-radius:14px!important;
+    overflow:hidden!important;
+  }
+  .shipment-map-canvas{
+    width:100%!important;
+    height:clamp(300px,46vw,560px)!important;
+    min-height:300px!important;
+  }
+  .shipment-map-summary{
+    min-height:68px!important;
+    padding:12px 18px!important;
+  }
+}
+@media(max-width:650px){
+  .reference-style .route-map{padding:12px 5px 0!important}
+  .reference-style .route-map-head{padding:0 8px 12px!important}
+  .shipment-map-canvas{height:clamp(300px,46vw,360px)!important;min-height:300px!important}
+  .shipment-map-summary{padding:12px 10px!important;min-height:66px!important}
+}
