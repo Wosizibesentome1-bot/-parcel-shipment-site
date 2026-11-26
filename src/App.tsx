@@ -145,46 +145,28 @@ function ensureGlobe():Promise<any>{
   const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js';script.async=true;script.dataset.parcelGlobe='true';script.onload=()=>resolve((window as any).Globe);script.onerror=()=>reject(new Error('3D globe library failed to load'));document.head.appendChild(script);
  });
 }
-function ShipmentGlobe({origin,destination,current,status,movementStartedAt,movementDurationMs,movementStartLocation}:{origin:string;destination:string;current:string;status:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
- const mapRef=useRef<HTMLDivElement|null>(null),mapInstance=useRef<any>(null),baseLayer=useRef<any>(null),labelLayer=useRef<any>(null);
- const [mapError,setMapError]=useState(false),[mapStyle,setMapStyle]=useState<'satellite'|'map'>('satellite');
- const countryName=(place:string)=>{const raw=(place||'').toLowerCase();if(raw.includes('ramsberg')||raw.includes('finnvägen')||raw.includes('finnvagen')||raw.includes('sweden'))return 'Sweden';const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};const known=COUNTRY_COORDS[key]||Object.keys(COUNTRY_COORDS).includes(key);if(known)return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ');return (place||'Location not available').split(',').pop()?.trim()||'Location not available'};
+function ShipmentGlobe({origin,destination}:{origin:string;destination:string;current?:string;status?:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
+ const mapRef=useRef<HTMLDivElement|null>(null),mapInstance=useRef<any>(null);
+ const [mapError,setMapError]=useState(false);
  useEffect(()=>{
   let disposed=false,resizeHandler:(()=>void)|null=null,map:any=null;
   const load=()=>new Promise<any>((resolve,reject)=>{const w=window as any;if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}if(w.L){resolve(w.L);return}const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Leaflet failed'));document.head.appendChild(script)});
   setMapError(false);
   load().then((L:any)=>{if(disposed||!mapRef.current)return;
-   const a=countryLatLon(origin),b=countryLatLon(destination);
-   map=L.map(mapRef.current,{zoomControl:false,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,zoomSnap:0.1,zoomDelta:0.5,minZoom:1,maxZoom:9}).setView([(a[0]+b[0])/2,(a[1]+b[1])/2],1.8);
+   map=L.map(mapRef.current,{zoomControl:true,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,zoomSnap:0.25,zoomDelta:0.5,minZoom:1,maxZoom:8}).setView([20,0],1);
    mapInstance.current=map;
-   const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:18});
-   const street=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19});
-   const labels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,opacity:.98});
-   baseLayer.current={satellite,street};labelLayer.current=labels;satellite.addTo(map);labels.addTo(map);
-   const safe=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-   const pin=(color:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin" style="background:'+color+'"><i></i></span>',iconSize:[30,40],iconAnchor:[15,38]});
-   const originName=countryName(origin),destName=countryName(destination);
-   L.marker(a,{icon:pin('#13b94f'),zIndexOffset:900}).addTo(map).bindTooltip(safe(originName),{permanent:true,direction:'auto',offset:[10,-12],className:'parcel-country-label'});
-   L.marker(b,{icon:pin('#ef2929'),zIndexOffset:950}).addTo(map).bindTooltip(safe(destName),{permanent:true,direction:'auto',offset:[10,-12],className:'parcel-country-label'});
-   const route=L.polyline([a,b],{color:'#ffffff',weight:3,opacity:.98,dashArray:'9 8',lineCap:'round'}).addTo(map);
-   const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
-   L.marker(mid,{icon:L.divIcon({className:'parcel-plane-icon',html:'✈',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);
-   const bounds=L.latLngBounds([a,b]);const worldBounds=L.latLngBounds([[-58,-180],[82,180]]);map.fitBounds(worldBounds,{padding:[6,6],maxZoom:1.2,animate:false});
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:8}).addTo(map);
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
-   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(worldBounds,{padding:[6,6],maxZoom:1.2,animate:false})}},350);
+   setTimeout(()=>{if(!disposed){map.invalidateSize();map.setView([20,0],1,false)}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove()}mapInstance.current=null;baseLayer.current=null;labelLayer.current=null};
- },[origin,destination]);
- useEffect(()=>{const m=mapInstance.current,l=baseLayer.current;if(!m||!l)return;Object.values(l).forEach((x:any)=>{if(m.hasLayer(x))m.removeLayer(x)});const next=mapStyle==='satellite'?l.satellite:l.street;next.addTo(m);if(mapStyle==='satellite'&&labelLayer.current)labelLayer.current.addTo(m)},[mapStyle]);
- const originName=countryName(origin),destName=countryName(destination);
- return <div className="shipment-map-design">
+  return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove()}mapInstance.current=null};
+ },[]);
+ return <div className="shipment-map-design shipment-world-map-only">
   <div className="shipment-map-canvas">
-   <div ref={mapRef} className="shipment-globe-map" role="img" aria-label={'World map showing route from '+originName+' to '+destName}/>
-   <div className="shipment-map-style"><button className={mapStyle==='map'?'active':''} onClick={()=>setMapStyle('map')}>▱ &nbsp;Map</button><button className={mapStyle==='satellite'?'active':''} onClick={()=>setMapStyle('satellite')}>◎ &nbsp;Satellite</button></div>
-   <div className="shipment-map-controls"><button aria-label="Zoom in" onClick={()=>mapInstance.current?.zoomIn()}>+</button><button aria-label="Zoom out" onClick={()=>mapInstance.current?.zoomOut()}>−</button><button aria-label="Fullscreen" onClick={()=>{const el=mapRef.current?.parentElement;if(!el)return;if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.();setTimeout(()=>mapInstance.current?.invalidateSize(),250)}}>⛶</button></div>
+   <div ref={mapRef} className="shipment-globe-map" role="img" aria-label="World map showing country names and international borders, without route lines or location pins"/>
+   <button className="shipment-world-fullscreen" type="button" aria-label="View map fullscreen" onClick={()=>{const el=mapRef.current?.parentElement;if(!el)return;if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.();setTimeout(()=>mapInstance.current?.invalidateSize(),250)}}>⛶</button>
    {mapError&&<div className="live-map-fallback">Map unavailable. Please refresh.</div>}
   </div>
-  <div className="shipment-map-summary"><div className="shipment-map-place"><span className="summary-pin origin-pin">●</span><div><small>Origin</small><strong>{originName}</strong></div></div><div className="shipment-map-flight"><span></span><b>✈</b><span></span></div><div className="shipment-map-place destination-place"><span className="summary-pin destination-pin">●</span><div><small>Destination</small><strong>{destName}</strong></div></div></div>
  </div>
 }
 
