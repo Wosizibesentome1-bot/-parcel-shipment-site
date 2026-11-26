@@ -137,13 +137,13 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const mapModeControl=L.control({position:'topleft'});
    mapModeControl.onAdd=()=>{
     const box=L.DomUtil.create('div','parcel-map-mode-control');
-    box.innerHTML='<button type="button" class="active" data-map-mode="map">Map</button><button type="button" data-map-mode="satellite">Satellite</button>';
+    box.style.cssText='display:flex;background:#fff;border:1px solid #d6dce5;border-radius:7px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.16);margin:10px';box.innerHTML='<button type="button" class="active" data-map-mode="map" style="border:0;padding:10px 17px;background:#5420a8;color:#fff;font-size:14px;font-weight:700">Map</button><button type="button" data-map-mode="satellite" style="border:0;padding:10px 17px;background:#fff;color:#263746;font-size:14px;font-weight:700">Satellite</button>';
     L.DomEvent.disableClickPropagation(box);
     box.querySelectorAll('button').forEach((button:any)=>button.addEventListener('click',()=>{
      const satellite=button.dataset.mapMode==='satellite';
      if(satellite){if(map.hasLayer(mapLayer))map.removeLayer(mapLayer);if(!map.hasLayer(satelliteLayer))satelliteLayer.addTo(map)}
      else{if(map.hasLayer(satelliteLayer))map.removeLayer(satelliteLayer);if(!map.hasLayer(mapLayer))mapLayer.addTo(map)}
-     box.querySelectorAll('button').forEach((b:any)=>b.classList.toggle('active',b===button));
+     box.querySelectorAll('button').forEach((b:any)=>{b.classList.toggle('active',b===button);b.style.background=b===button?'#5420a8':'#fff';b.style.color=b===button?'#fff':'#263746'});
     }));
     return box;
    };
@@ -151,7 +151,7 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const fullscreenControl=L.control({position:'topright'});
    fullscreenControl.onAdd=()=>{
     const button=L.DomUtil.create('button','parcel-map-fullscreen');
-    button.type='button';button.setAttribute('aria-label','Toggle map fullscreen');button.title='Expand map';button.innerHTML='⛶';
+    button.type='button';button.setAttribute('aria-label','Toggle map fullscreen');button.title='Expand map';button.innerHTML='⛶';button.style.cssText='width:42px;height:42px;border:1px solid #d6dce5;border-radius:7px;background:#fff;color:#263746;font-size:25px;line-height:1;box-shadow:0 2px 10px rgba(0,0,0,.16);margin:10px';
     L.DomEvent.disableClickPropagation(button);
     button.addEventListener('click',()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();setTimeout(()=>map.invalidateSize(),250)});
     return button;
