@@ -146,51 +146,45 @@ function ensureGlobe():Promise<any>{
  });
 }
 function ShipmentGlobe({origin,destination,current,status,movementStartedAt,movementDurationMs,movementStartLocation}:{origin:string;destination:string;current:string;status:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
- const mapRef=useRef<HTMLDivElement|null>(null);
- const [mapError,setMapError]=useState(false);
+ const mapRef=useRef<HTMLDivElement|null>(null),mapInstance=useRef<any>(null),baseLayer=useRef<any>(null),labelLayer=useRef<any>(null);
+ const [mapError,setMapError]=useState(false),[mapStyle,setMapStyle]=useState<'satellite'|'map'>('satellite');
+ const countryName=(place:string)=>{const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ')};
  useEffect(()=>{
-  let map:any=null,disposed=false,resizeHandler:(()=>void)|null=null;
+  let disposed=false,resizeHandler:(()=>void)|null=null,map:any=null;
+  const load=()=>new Promise<any>((resolve,reject)=>{const w=window as any;if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}if(w.L){resolve(w.L);return}const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Leaflet failed'));document.head.appendChild(script)});
   setMapError(false);
-  const loadLeaflet=()=>new Promise<any>((resolve,reject)=>{
-   const w=window as any;
-   if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}
-   if(w.L){resolve(w.L);return}
-   const existing=document.querySelector('script[data-parcel-leaflet]');
-   if(existing){existing.addEventListener('load',()=>resolve(w.L),{once:true});existing.addEventListener('error',()=>reject(new Error('Map library failed to load')),{once:true});return}
-   const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Map library failed to load'));document.head.appendChild(script);
-  });
-  loadLeaflet().then((L:any)=>{
-   if(disposed||!mapRef.current)return;
-   // This view is intentionally country-to-country: no city geocoder or current-location pin.
-   const start=countryLatLon(origin),end=countryLatLon(destination);
-   const countryLabel=(place:string)=>{const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ')};
-   const originName=countryLabel(origin),destinationName=countryLabel(destination);
-   map=L.map(mapRef.current,{scrollWheelZoom:true,worldCopyJump:true,zoomControl:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,wheelPxPerZoomLevel:90,zoomSnap:0.5,zoomDelta:0.5,minZoom:2}).setView(start,2.5);
-   // CARTO Voyager includes country borders and labels, plus city and regional names.
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',subdomains:'abc',maxZoom:19}).addTo(map);
+  load().then((L:any)=>{if(disposed||!mapRef.current)return;
+   const a=countryLatLon(origin),b=countryLatLon(destination);
+   map=L.map(mapRef.current,{zoomControl:false,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,minZoom:2,maxZoom:9}).setView([(a[0]+b[0])/2,(a[1]+b[1])/2],2.4);
+   mapInstance.current=map;
+   const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:18});
+   const street=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19});
+   const labels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,opacity:.98});
+   baseLayer.current={satellite,street};labelLayer.current=labels;satellite.addTo(map);labels.addTo(map);
    const safe=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-   const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
-   const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,title:originName}).addTo(map);
-   originMarker.bindTooltip(safe(originName),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-origin-map-label',opacity:1}).bindPopup('<strong>Origin</strong><br/>'+safe(originName));
-   const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,title:destinationName}).addTo(map);
-   destinationMarker.bindTooltip(safe(destinationName),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).bindPopup('<strong>Destination</strong><br/>'+safe(destinationName));
-   // One clean route line, joining only the two country pins.
-   L.polyline([start,end],{color:'#9a7bd0',weight:10,opacity:.22,lineCap:'round'}).addTo(map);
-   L.polyline([start,end],{color:'#5420a8',weight:4,opacity:.98,lineCap:'round'}).addTo(map);
-   const bounds=L.latLngBounds([start,end]);
-   map.fitBounds(bounds,{padding:[85,85],maxZoom:3.5,animate:true});
-   resizeHandler=()=>map?.invalidateSize();
-   window.addEventListener('resize',resizeHandler);
-   document.addEventListener('fullscreenchange',resizeHandler);
-   setTimeout(()=>{if(!disposed){map?.invalidateSize();map?.fitBounds(bounds,{padding:[85,85],maxZoom:3.5,animate:false})}},700);
+   const pin=(color:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin" style="background:'+color+'"><i></i></span>',iconSize:[44,56],iconAnchor:[22,53]});
+   const originName=countryName(origin),destName=countryName(destination);
+   L.marker(a,{icon:pin('#13b94f'),zIndexOffset:900}).addTo(map).bindTooltip(safe(originName),{permanent:true,direction:'right',offset:[16,-18],className:'parcel-country-label'});
+   L.marker(b,{icon:pin('#ef2929'),zIndexOffset:950}).addTo(map).bindTooltip(safe(destName),{permanent:true,direction:'right',offset:[16,-18],className:'parcel-country-label'});
+   const route=L.polyline([a,b],{color:'#ffffff',weight:4,opacity:.98,dashArray:'12 10',lineCap:'round'}).addTo(map);
+   const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
+   L.marker(mid,{icon:L.divIcon({className:'parcel-plane-icon',html:'✈',iconSize:[36,36],iconAnchor:[18,18]})}).addTo(map);
+   const bounds=L.latLngBounds([a,b]);map.fitBounds(bounds,{padding:[95,95],maxZoom:3.5,animate:false});
+   resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
+   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(bounds,{padding:[95,95],maxZoom:3.5,animate:false})}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove();map=null}};
+  return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove()}mapInstance.current=null;baseLayer.current=null;labelLayer.current=null};
  },[origin,destination]);
- return <div className="shipment-globe-wrap" style={{position:'relative',display:'block',width:'100%',height:'460px',minHeight:'460px',overflow:'hidden',background:'#e5edf1',borderRadius:'12px'}}>
-  <div ref={mapRef} className="shipment-globe-map" style={{display:'block',position:'relative',width:'100%',height:'460px',minHeight:'460px',background:'#e5edf1'}} role="img" aria-label={'World map showing country names and a route from '+origin+' to '+destination}/>
-  <button type="button" className="parcel-map-fullscreen" aria-label="Expand map" title="Expand map" onClick={()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();window.setTimeout(()=>{const w=window as any;if(w.L&&node)w.L.DomEvent?null:null;window.dispatchEvent(new Event('resize'))},250)}}>⛶</button>
-  {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
-  <div className="globe-note route-map-note">Country names and borders are shown across the map. The line connects the origin and destination countries; it is not live GPS tracking.</div>
+ useEffect(()=>{const m=mapInstance.current,l=baseLayer.current;if(!m||!l)return;Object.values(l).forEach((x:any)=>{if(m.hasLayer(x))m.removeLayer(x)});const next=mapStyle==='satellite'?l.satellite:l.street;next.addTo(m);if(mapStyle==='satellite'&&labelLayer.current)labelLayer.current.addTo(m)},[mapStyle]);
+ const originName=countryName(origin),destName=countryName(destination);
+ return <div className="shipment-map-design">
+  <div className="shipment-map-canvas">
+   <div ref={mapRef} className="shipment-globe-map" role="img" aria-label={'World map showing route from '+originName+' to '+destName}/>
+   <div className="shipment-map-style"><button className={mapStyle==='map'?'active':''} onClick={()=>setMapStyle('map')}>▱ &nbsp;Map</button><button className={mapStyle==='satellite'?'active':''} onClick={()=>setMapStyle('satellite')}>◎ &nbsp;Satellite</button></div>
+   <div className="shipment-map-controls"><button aria-label="Zoom in" onClick={()=>mapInstance.current?.zoomIn()}>+</button><button aria-label="Zoom out" onClick={()=>mapInstance.current?.zoomOut()}>−</button><button aria-label="Fullscreen" onClick={()=>{const el=mapRef.current?.parentElement;if(!el)return;if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.();setTimeout(()=>mapInstance.current?.invalidateSize(),250)}}>⛶</button></div>
+   {mapError&&<div className="live-map-fallback">Map unavailable. Please refresh.</div>}
+  </div>
+  <div className="shipment-map-summary"><div className="shipment-map-place"><span className="summary-pin origin-pin">●</span><div><small>Origin</small><strong>{originName}</strong></div></div><div className="shipment-map-flight"><span></span><b>✈</b><span></span></div><div className="shipment-map-place destination-place"><span className="summary-pin destination-pin">●</span><div><small>Destination</small><strong>{destName}</strong></div></div></div>
  </div>
 }
 
@@ -268,4 +262,4 @@ const Status=({value}:{value:string})=><span className={'status '+value.toLowerC
 const Info=({label,value}:{label:string;value:string})=><div><span>{label}</span><strong>{value||'—'}</strong></div>;
 const Feature=({icon,title,text}:{icon:any;title:string;text:string})=><div className="feature"><span>{icon}</span><div><strong>{title}</strong><p>{text}</p></div></div>;
 const Stat=({label,value}:{label:string;value:number})=><div className="stat"><span>{label}</span><strong>{value}</strong></div>;
-function RouteMap({shipment:s}:{shipment:Shipment}){const current=s.currentLocation||s.origin;return <div className="route-map"><div className="route-map-head"><div><span className="muted">SHIPMENT ROUTE</span><strong>Origin to destination</strong></div><span className="route-live"><i/> {s.status||'In transit'}</span></div><ShipmentGlobe origin={s.origin} destination={s.destination} current={current} status={s.status} movementStartedAt={s.movementStartedAt} movementDurationMs={s.movementDurationMs} movementStartLocation={s.movementStartLocation}/><div className="route-caption">{s.movementStartedAt?'The marker follows the admin-scheduled route duration. This is an illustrative animation, not live GPS tracking.':'The map shows the last reported location. Route movement begins only when scheduled by the administrator; no live GPS is claimed.'}</div></div>}
+function RouteMap({shipment:s}:{shipment:Shipment}){return <div className="route-map"><div className="route-map-head"><div><span className="muted">SHIPMENT ROUTE</span><strong>Origin to destination</strong></div><span className="route-live"><i/> {s.status||'In transit'}</span></div><ShipmentGlobe origin={s.origin} destination={s.destination} current={s.currentLocation||s.origin} status={s.status} movementStartedAt={s.movementStartedAt} movementDurationMs={s.movementDurationMs} movementStartLocation={s.movementStartLocation}/></div>}
