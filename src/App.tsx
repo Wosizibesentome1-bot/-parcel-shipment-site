@@ -185,7 +185,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
   setMapError(false);
   load().then(async(L:any)=>{
    if(disposed||!mapRef.current)return;
-   map=L.map(mapRef.current,{zoomControl:true,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,zoomSnap:0.25,zoomDelta:0.5,minZoom:1,maxZoom:8}).setView([20,0],1);
+   map=L.map(mapRef.current,{zoomControl:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false,boxZoom:false,keyboard:false,worldCopyJump:true,zoomAnimation:false,fadeAnimation:true,minZoom:1,maxZoom:1}).setView([20,0],1);
    mapInstance.current=map;
    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:8}).addTo(map);
    const [from,to,live]=await Promise.all([resolveMapPlace(origin),resolveMapPlace(destination),resolveMapPlace(current||origin)]);
