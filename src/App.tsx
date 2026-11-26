@@ -167,7 +167,7 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const originName=countryLabel(origin),destinationName=countryLabel(destination);
    map=L.map(mapRef.current,{scrollWheelZoom:true,worldCopyJump:true,zoomControl:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,wheelPxPerZoomLevel:90,zoomSnap:0.5,zoomDelta:0.5,minZoom:2}).setView(start,2.5);
    // CARTO Voyager includes country borders and labels, plus city and regional names.
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',subdomains:'abcd',maxZoom:19}).addTo(map);
+   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',subdomains:'abc',maxZoom:19}).addTo(map);
    const safe=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
    const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
    const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,title:originName}).addTo(map);
@@ -182,12 +182,12 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    resizeHandler=()=>map?.invalidateSize();
    window.addEventListener('resize',resizeHandler);
    document.addEventListener('fullscreenchange',resizeHandler);
-   setTimeout(()=>{if(!disposed)map?.invalidateSize()},250);
+   setTimeout(()=>{if(!disposed){map?.invalidateSize();map?.fitBounds(bounds,{padding:[85,85],maxZoom:3.5,animate:false})}},700);
   }).catch(()=>{if(!disposed)setMapError(true)});
   return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove();map=null}};
  },[origin,destination]);
- return <div className="shipment-globe-wrap">
-  <div ref={mapRef} className="shipment-globe-map" role="img" aria-label={'World map showing country names and a route from '+origin+' to '+destination}/>
+ return <div className="shipment-globe-wrap" style={{position:'relative',display:'block',width:'100%',height:'460px',minHeight:'460px',overflow:'hidden',background:'#e5edf1',borderRadius:'12px'}}>
+  <div ref={mapRef} className="shipment-globe-map" style={{display:'block',position:'relative',width:'100%',height:'460px',minHeight:'460px',background:'#e5edf1'}} role="img" aria-label={'World map showing country names and a route from '+origin+' to '+destination}/>
   <button type="button" className="parcel-map-fullscreen" aria-label="Expand map" title="Expand map" onClick={()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();window.setTimeout(()=>{const w=window as any;if(w.L&&node)w.L.DomEvent?null:null;window.dispatchEvent(new Event('resize'))},250)}}>⛶</button>
   {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
   <div className="globe-note route-map-note">Country names and borders are shown across the map. The line connects the origin and destination countries; it is not live GPS tracking.</div>
