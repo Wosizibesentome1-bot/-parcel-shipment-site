@@ -155,7 +155,7 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
   setMapError(false);
   load().then((L:any)=>{if(disposed||!mapRef.current)return;
    const a=countryLatLon(origin),b=countryLatLon(destination);
-   map=L.map(mapRef.current,{zoomControl:false,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,minZoom:2,maxZoom:9}).setView([(a[0]+b[0])/2,(a[1]+b[1])/2],2.4);
+   map=L.map(mapRef.current,{zoomControl:false,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,minZoom:1,maxZoom:9}).setView([(a[0]+b[0])/2,(a[1]+b[1])/2],1.8);
    mapInstance.current=map;
    const satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:18});
    const street=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19});
@@ -169,9 +169,9 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const route=L.polyline([a,b],{color:'#ffffff',weight:3,opacity:.98,dashArray:'9 8',lineCap:'round'}).addTo(map);
    const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];
    L.marker(mid,{icon:L.divIcon({className:'parcel-plane-icon',html:'✈',iconSize:[26,26],iconAnchor:[13,13]})}).addTo(map);
-   const bounds=L.latLngBounds([a,b]);map.fitBounds(bounds,{padding:[55,55],maxZoom:2.8,animate:false});
+   const bounds=L.latLngBounds([a,b]);map.fitBounds(bounds,{padding:[24,24],maxZoom:1.8,animate:false});
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
-   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(bounds,{padding:[55,55],maxZoom:2.8,animate:false})}},350);
+   setTimeout(()=>{if(!disposed){map.invalidateSize();map.fitBounds(bounds,{padding:[24,24],maxZoom:1.8,animate:false})}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
   return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove()}mapInstance.current=null;baseLayer.current=null;labelLayer.current=null};
  },[origin,destination]);
