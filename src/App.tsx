@@ -131,8 +131,38 @@ function ShipmentGlobe({origin,destination,current,status,movementStartedAt,move
    const routeStart=movementStartedAt?countryLatLon(movementStartLocation||current||origin):start;
    // Country-level coordinates are illustrative unless precise GPS coordinates are supplied.
    map=L.map(mapRef.current,{scrollWheelZoom:false,worldCopyJump:true,zoomControl:true}).setView([(start[0]+end[0])/2,(start[1]+end[1])/2],3);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
+   const mapLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
+   const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:19});
    const safeTitle=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+   const mapModeControl=L.control({position:'topleft'});
+   mapModeControl.onAdd=()=>{
+    const box=L.DomUtil.create('div','parcel-map-mode-control');
+    box.innerHTML='<button type="button" class="active" data-map-mode="map">Map</button><button type="button" data-map-mode="satellite">Satellite</button>';
+    L.DomEvent.disableClickPropagation(box);
+    box.querySelectorAll('button').forEach((button:any)=>button.addEventListener('click',()=>{
+     const satellite=button.dataset.mapMode==='satellite';
+     if(satellite){if(map.hasLayer(mapLayer))map.removeLayer(mapLayer);if(!map.hasLayer(satelliteLayer))satelliteLayer.addTo(map)}
+     else{if(map.hasLayer(satelliteLayer))map.removeLayer(satelliteLayer);if(!map.hasLayer(mapLayer))mapLayer.addTo(map)}
+     box.querySelectorAll('button').forEach((b:any)=>b.classList.toggle('active',b===button));
+    }));
+    return box;
+   };
+   mapModeControl.addTo(map);
+   const fullscreenControl=L.control({position:'topright'});
+   fullscreenControl.onAdd=()=>{
+    const button=L.DomUtil.create('button','parcel-map-fullscreen');
+    button.type='button';button.setAttribute('aria-label','Toggle map fullscreen');button.title='Expand map';button.innerHTML='⛶';
+    L.DomEvent.disableClickPropagation(button);
+    button.addEventListener('click',()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();setTimeout(()=>map.invalidateSize(),250)});
+    return button;
+   };
+   fullscreenControl.addTo(map);
+   nearby.forEach((name)=>{
+    const coords=COUNTRY_COORDS[name.toLowerCase()];
+    if(!coords)return;
+    const labelIcon=L.divIcon({className:'parcel-neighbor-label-shell',html:'<span style="display:inline-block;padding:2px 5px;border-radius:4px;background:rgba(255,255,255,.72);color:#263746;font-size:12px;font-weight:700;white-space:nowrap;text-shadow:0 1px 1px rgba(255,255,255,.9);">'+safeTitle(name)+'</span>',iconSize:[0,0],iconAnchor:[0,0]});
+    L.marker(coords,{icon:labelIcon,interactive:false,zIndexOffset:100}).addTo(map);
+   });
    const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
    const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,keyboard:true,title:origin}).addTo(map);
    originMarker.bindTooltip(safeTitle('Origin: '+origin),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-origin-map-label',opacity:1}).openTooltip();
