@@ -90,6 +90,10 @@ function resolveCountry(place:string){const key=(place||'').toLowerCase().replac
 function nearbyCountryNames(origin:string,destination:string){const originKey=resolveCountry(origin),destinationKey=resolveCountry(destination);const excluded=[originKey,destinationKey,origin.toLowerCase(),destination.toLowerCase()];const names=[...(COUNTRY_NEIGHBORS[originKey]||[]),...(COUNTRY_NEIGHBORS[destinationKey]||[])];return [...new Set(names)].filter(name=>!excluded.some(key=>key&&name.toLowerCase()===key)).slice(0,10);}
 function countryLatLon(place:string):[number,number]{
  const key=(place||'').toLowerCase().replace(/\\s+/g,' ').trim();
+ // Resolve named cities/regions before falling back to country-centre coordinates.
+ if(key.includes('ramsberg') || key.includes('finnvägen') || key.includes('finnvagen')) return [59.7765,15.2856];
+ if(key.includes('new york')) return [40.7128,-74.0060];
+ if(key.includes('united states') || key==='usa' || key==='us') return [40.7128,-74.0060];
  let found=COUNTRY_COORDS[key];
  if(!found){const entry=Object.entries(COUNTRY_COORDS).sort(([a],[b])=>b.length-a.length).find(([name])=>key.includes(name));found=entry?.[1]}
  return found||[20,0];
