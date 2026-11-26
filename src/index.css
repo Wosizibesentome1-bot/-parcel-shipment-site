@@ -498,3 +498,33 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 @media(max-width:430px){
  .reference-style .continent-name-label span{font-size:9px!important;letter-spacing:.5px!important}
 }
+
+
+/* FedEx-inspired international shipment route map */
+.reference-style .shipment-route-map{width:100%!important;max-width:100%!important;margin:0!important;padding:0!important;border-radius:12px!important;overflow:hidden!important;background:#eaf1f8!important;box-shadow:0 2px 12px rgba(20,48,80,.10)!important}
+.reference-style .shipment-route-map .shipment-map-canvas{position:relative!important;width:100%!important;height:clamp(260px,58vw,520px)!important;min-height:260px!important;max-height:520px!important;overflow:hidden!important;background:#e8eef5!important}
+.reference-style .shipment-route-map .shipment-globe-map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;background:#e8eef5!important}
+.reference-style .shipment-route-map .leaflet-control-zoom{border:0!important;border-radius:8px!important;overflow:hidden!important;box-shadow:0 2px 8px rgba(0,0,0,.18)!important}
+.reference-style .shipment-route-map .leaflet-control-zoom a{color:#173b63!important}
+.reference-style .parcel-route-marker-wrap{background:transparent!important;border:0!important}
+.reference-style .parcel-route-marker{position:relative;width:28px;height:28px;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 9px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center}
+.reference-style .parcel-route-marker span{width:8px;height:8px;border-radius:50%;background:#fff}
+.reference-style .parcel-route-marker.origin{background:#15945b}
+.reference-style .parcel-route-marker.destination{background:#1769d2}
+.reference-style .parcel-route-marker b{position:absolute;left:32px;top:-4px;white-space:nowrap;background:#fff;color:#20344b;font:700 11px/1.2 Arial,sans-serif;padding:5px 8px;border-radius:5px;box-shadow:0 1px 5px rgba(0,0,0,.16)}
+.reference-style .shipment-route-legend{position:absolute;z-index:650;left:12px;bottom:12px;display:flex;gap:12px;align-items:center;padding:8px 11px;border-radius:7px;background:rgba(255,255,255,.96);box-shadow:0 1px 6px rgba(0,0,0,.15);color:#253a52;font-size:11px;font-weight:600}
+.reference-style .shipment-route-legend span{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.reference-style .shipment-route-legend i{display:inline-block;width:9px;height:9px;border-radius:50%}
+.reference-style .shipment-route-legend .legend-origin{background:#15945b}
+.reference-style .shipment-route-legend .legend-route{width:16px;height:3px;border-radius:2px;background:#1769d2}
+.reference-style .shipment-route-legend .legend-destination{background:#1769d2}
+.reference-style .shipment-route-map .shipment-world-fullscreen{position:absolute!important;z-index:700!important;right:12px!important;top:12px!important;width:40px!important;height:40px!important;border:0!important;border-radius:8px!important;background:#fff!important;color:#173b63!important;font-size:22px!important;box-shadow:0 1px 6px rgba(0,0,0,.2)!important;cursor:pointer!important}
+.reference-style .shipment-route-map:fullscreen{width:100vw!important;height:100vh!important;background:#e8eef5!important}
+.reference-style .shipment-route-map:fullscreen .shipment-map-canvas{width:100vw!important;height:100vh!important;max-height:none!important}
+@media(max-width:430px){
+ .reference-style .shipment-route-map .shipment-map-canvas{height:clamp(240px,72vw,330px)!important;min-height:240px!important}
+ .reference-style .shipment-route-legend{left:7px;bottom:7px;gap:8px;padding:7px 8px;font-size:10px}
+ .reference-style .parcel-route-marker b{font-size:10px;padding:4px 6px}
+ .reference-style .shipment-route-map .shipment-world-fullscreen{right:8px!important;top:8px!important;width:36px!important;height:36px!important}
+}
+@media(min-width:700px){.reference-style .shipment-route-map .shipment-map-canvas{height:clamp(380px,48vw,520px)!important}}
