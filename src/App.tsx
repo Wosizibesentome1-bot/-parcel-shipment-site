@@ -148,118 +148,52 @@ function ensureGlobe():Promise<any>{
 function ShipmentGlobe({origin,destination,current,status,movementStartedAt,movementDurationMs,movementStartLocation}:{origin:string;destination:string;current:string;status:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
  const mapRef=useRef<HTMLDivElement|null>(null);
  const [mapError,setMapError]=useState(false);
- const nearby=nearbyCountryNames(origin,destination);
- const nearbyKey=nearby.join('|');
  useEffect(()=>{
   let map:any=null,disposed=false,resizeHandler:(()=>void)|null=null;
   setMapError(false);
   const loadLeaflet=()=>new Promise<any>((resolve,reject)=>{
    const w=window as any;
-   if(!document.querySelector('link[data-parcel-leaflet]')){
-    const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css);
-   }
+   if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}
    if(w.L){resolve(w.L);return}
    const existing=document.querySelector('script[data-parcel-leaflet]');
    if(existing){existing.addEventListener('load',()=>resolve(w.L),{once:true});existing.addEventListener('error',()=>reject(new Error('Map library failed to load')),{once:true});return}
    const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Map library failed to load'));document.head.appendChild(script);
   });
-  loadLeaflet().then(async (L:any)=>{
+  loadLeaflet().then((L:any)=>{
    if(disposed||!mapRef.current)return;
-   const [originPlace,destinationPlace,currentPlace,movementPlace]=await Promise.all([
-    resolveMapPlace(origin),resolveMapPlace(destination),resolveMapPlace(current||origin),resolveMapPlace(movementStartLocation||current||origin)
-   ]);
-   if(disposed||!mapRef.current)return;
-   const start=originPlace.coords,end=destinationPlace.coords,now=currentPlace.coords;
-   const routeStart=movementStartedAt?movementPlace.coords:start;
-   // This is a plotted great-circle corridor between geocoded places, not a verified carrier itinerary.
-   const routePoints=greatCircleRoute(routeStart,end,160);
-   map=L.map(mapRef.current,{scrollWheelZoom:true,worldCopyJump:true,zoomControl:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,wheelPxPerZoomLevel:90,zoomSnap:0.5,zoomDelta:0.5}).setView(start,3);
-   const mapLayer=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',subdomains:['a','b','c'],maxZoom:19,crossOrigin:true}).addTo(map);
-   const satelliteLayer=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:19});
-   const satelliteLabels=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',{attribution:'&copy; CARTO',subdomains:'abcd',maxZoom:19,opacity:0.95});
-   const safeTitle=(value:string)=>value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-   const mapModeControl=L.control({position:'topleft'});
-   mapModeControl.onAdd=()=>{
-    const box=L.DomUtil.create('div','parcel-map-mode-control');
-    box.style.cssText='display:flex;background:#fff;border:1px solid #d6dce5;border-radius:7px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.16);margin:10px';box.innerHTML='<button type="button" class="active" data-map-mode="map" style="border:0;padding:10px 17px;background:#5420a8;color:#fff;font-size:14px;font-weight:700">Map</button><button type="button" data-map-mode="satellite" style="border:0;padding:10px 17px;background:#fff;color:#263746;font-size:14px;font-weight:700">Satellite</button>';
-    L.DomEvent.disableClickPropagation(box);
-    box.querySelectorAll('button').forEach((button:any)=>button.addEventListener('click',()=>{
-     const satellite=button.dataset.mapMode==='satellite';
-     if(satellite){if(map.hasLayer(mapLayer))map.removeLayer(mapLayer);if(!map.hasLayer(satelliteLayer))satelliteLayer.addTo(map);if(!map.hasLayer(satelliteLabels))satelliteLabels.addTo(map)}
-     else{if(map.hasLayer(satelliteLayer))map.removeLayer(satelliteLayer);if(map.hasLayer(satelliteLabels))map.removeLayer(satelliteLabels);if(!map.hasLayer(mapLayer))mapLayer.addTo(map)}
-     box.querySelectorAll('button').forEach((b:any)=>{b.classList.toggle('active',b===button);b.style.background=b===button?'#5420a8':'#fff';b.style.color=b===button?'#fff':'#263746'});
-    }));
-    return box;
-   };
-   mapModeControl.addTo(map);
-   const fullscreenControl=L.control({position:'topright'});
-   fullscreenControl.onAdd=()=>{
-    const button=L.DomUtil.create('button','parcel-map-fullscreen');
-    button.type='button';button.setAttribute('aria-label','Toggle map fullscreen');button.title='Expand map';button.innerHTML='⛶';button.style.cssText='width:42px;height:42px;border:1px solid #d6dce5;border-radius:7px;background:#fff;color:#263746;font-size:25px;line-height:1;box-shadow:0 2px 10px rgba(0,0,0,.16);margin:10px';
-    L.DomEvent.disableClickPropagation(button);
-    button.addEventListener('click',()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();setTimeout(()=>map.invalidateSize(),250)});
-    return button;
-   };
-   fullscreenControl.addTo(map);
-   nearby.forEach((name)=>{
-    const coords=COUNTRY_COORDS[name.toLowerCase()];
-    if(!coords)return;
-    const labelIcon=L.divIcon({className:'parcel-neighbor-label-shell',html:'<span style="display:inline-block;padding:2px 5px;border-radius:4px;background:rgba(255,255,255,.72);color:#263746;font-size:12px;font-weight:700;white-space:nowrap;text-shadow:0 1px 1px rgba(255,255,255,.9);">'+safeTitle(name)+'</span>',iconSize:[0,0],iconAnchor:[0,0]});
-    L.marker(coords,{icon:labelIcon,interactive:false,zIndexOffset:100}).addTo(map);
-   });
+   // This view is intentionally country-to-country: no city geocoder or current-location pin.
+   const start=countryLatLon(origin),end=countryLatLon(destination);
+   const countryLabel=(place:string)=>{const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States',uk:'United Kingdom','cote d ivoire':"Côte d'Ivoire"};return aliases[key]||key.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ')};
+   const originName=countryLabel(origin),destinationName=countryLabel(destination);
+   map=L.map(mapRef.current,{scrollWheelZoom:true,worldCopyJump:true,zoomControl:true,zoomAnimation:true,fadeAnimation:true,markerZoomAnimation:true,wheelPxPerZoomLevel:90,zoomSnap:0.5,zoomDelta:0.5,minZoom:2}).setView(start,2.5);
+   // CARTO Voyager includes country borders and labels, plus city and regional names.
+   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',subdomains:'abcd',maxZoom:19}).addTo(map);
+   const safe=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
    const makeIcon=(kind:string)=>L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-'+kind+'"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
-   const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,keyboard:true,title:origin}).addTo(map);
-   originMarker.bindTooltip(safeTitle('Origin: '+originPlace.label),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-origin-map-label',opacity:1}).openTooltip();
-   originMarker.bindPopup('<strong>Origin</strong><br/>'+safeTitle(originPlace.label)+(originPlace.precise?'':'<br/><small>Country-level estimate</small>'));
-   const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,keyboard:true,title:destination}).addTo(map);
-   destinationMarker.bindTooltip(safeTitle('Destination: '+destinationPlace.label),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).openTooltip();
-   destinationMarker.bindPopup('<strong>Destination</strong><br/>'+safeTitle(destinationPlace.label)+(destinationPlace.precise?'':'<br/><small>Country-level estimate</small>'));
-   L.polyline(routePoints,{color:'#9a7bd0',weight:10,opacity:.22,lineCap:'round',lineJoin:'round'}).addTo(map);
-   const route=L.polyline(routePoints,{color:'#5420a8',weight:4,opacity:.98,lineCap:'round',lineJoin:'round'}).addTo(map);
-   const currentIcon=L.divIcon({className:'parcel-map-pin-shell',html:'<span class="parcel-map-pin parcel-map-pin-current"><span></span></span>',iconSize:[38,48],iconAnchor:[19,45]});
-   if(movementStartedAt && movementDurationMs && movementDurationMs>0){
-    const marker=L.marker(routeStart,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:'Package movement'}).addTo(map);
-    marker.bindTooltip('Package in transit',{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
-    const started=Date.parse(movementStartedAt);
-    const updatePosition=()=>{
-     const progress=Math.max(0,Math.min(1,(Date.now()-started)/movementDurationMs));
-     const routeIndex=Math.min(routePoints.length-1,Math.round(progress*(routePoints.length-1)));
-     marker.setLatLng(routePoints[routeIndex]);
-     marker.getTooltip()?.setContent(progress>=1?'Route animation complete':('Package in transit · '+Math.round(progress*100)+'%'));
-    };
-    updatePosition();
-    const movementTimer=window.setInterval(updatePosition,1000);
-    (map as any).__movementTimer=movementTimer;
-    marker.bindPopup('<strong>Shipment route progress</strong><br/>This marker follows the scheduled route animation. It is not live GPS.');
-   }else{
-    const marker=L.marker(now,{icon:currentIcon,zIndexOffset:1000,keyboard:true,title:current}).addTo(map);
-    marker.bindTooltip(safeTitle('Current reported location: '+current),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-current-map-label',opacity:1}).openTooltip();
-    marker.bindPopup('<strong>Current reported location</strong><br/>'+safeTitle(current));
-   }
-   map.fitBounds(route.getBounds().pad(0.22),{maxZoom:7,animate:true,duration:0.8});
-   resizeHandler=()=>map&&map.invalidateSize({pan:false});
+   const originMarker=L.marker(start,{icon:makeIcon('origin'),zIndexOffset:900,title:originName}).addTo(map);
+   originMarker.bindTooltip(safe(originName),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-origin-map-label',opacity:1}).bindPopup('<strong>Origin</strong><br/>'+safe(originName));
+   const destinationMarker=L.marker(end,{icon:makeIcon('destination'),zIndexOffset:950,title:destinationName}).addTo(map);
+   destinationMarker.bindTooltip(safe(destinationName),{permanent:true,direction:'top',offset:[0,-39],className:'parcel-destination-map-label',opacity:1}).bindPopup('<strong>Destination</strong><br/>'+safe(destinationName));
+   // One clean route line, joining only the two country pins.
+   L.polyline([start,end],{color:'#9a7bd0',weight:10,opacity:.22,lineCap:'round'}).addTo(map);
+   L.polyline([start,end],{color:'#5420a8',weight:4,opacity:.98,lineCap:'round'}).addTo(map);
+   const bounds=L.latLngBounds([start,end]);
+   map.fitBounds(bounds,{padding:[85,85],maxZoom:3.5,animate:true});
+   resizeHandler=()=>map?.invalidateSize();
    window.addEventListener('resize',resizeHandler);
-   map.on('fullscreenchange',()=>window.setTimeout(()=>map&&map.invalidateSize({pan:false}),150));
-   setTimeout(()=>{if(!disposed&&map)map.invalidateSize()},250);
+   document.addEventListener('fullscreenchange',resizeHandler);
+   setTimeout(()=>{if(!disposed)map?.invalidateSize()},250);
   }).catch(()=>{if(!disposed)setMapError(true)});
-  return ()=>{disposed=true;if(resizeHandler)window.removeEventListener('resize',resizeHandler);if(map){if((map as any).__movementTimer)window.clearInterval((map as any).__movementTimer);map.remove();map=null}};
- },[origin,destination,current,nearbyKey,movementStartedAt,movementDurationMs,movementStartLocation]);
- return <div className="shipment-globe-card route-overview-card globe3d-card">
-  <div className="globe-heading"><div><span className="globe-kicker">PACKAGE LOCATION</span><h3>Shipment route map</h3><p>Interactive road map with mapped city and country labels, geocoded endpoints, a plotted route corridor and shipment markers.</p></div><span className="globe-status"><i/>{status||'In transit'}</span></div>
-  <div className="globe-scene route-map-scene parcel-street-map-scene">
-   <div ref={mapRef} className="live-earth-globe parcel-street-map" role="img" aria-label={`Road map focused on the latest reported shipment location ${current||origin}`}/>
-   {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
-   <div className="globe-note route-map-note">Geocoded locations where available · illustrative great-circle corridor, not verified carrier routing or live GPS.</div>
-  </div>
-  <div className="nearby-countries"><div className="nearby-countries-heading"><span className="nearby-country-icon"><MapPin size={15}/></span><div><strong>Nearby countries</strong><small>Countries bordering or close to the origin and destination regions</small></div></div><div className="nearby-country-chips">{nearby.length?nearby.map(name=><span className="nearby-country-chip" key={name}>{name}</span>):<span className="nearby-country-empty">Nearby country information is not available for this route yet.</span>}</div></div>
-  <div className="route-summary">
-   <div className="route-summary-point"><span className="route-summary-marker route-origin-marker"><MapPin size={17}/></span><span><small>ORIGIN</small><b>{origin}</b></span></div>
-   <div className="route-summary-middle"><span className="route-summary-line"/><span className="route-summary-arrow">›</span><small>SHIPMENT ROUTE</small></div>
-   <div className="route-summary-point route-summary-destination"><span className="route-summary-marker route-destination-marker"><MapPin size={17}/></span><span><small>DESTINATION</small><b>{destination}</b></span></div>
-  </div>
-  <div className="route-latest-update"><span className="route-update-icon"><Package size={17}/></span><span><small>LATEST SHIPMENT UPDATE</small><b>{current}</b></span><span className="route-update-status">{status||'In transit'}</span></div>
+  return ()=>{disposed=true;if(resizeHandler){window.removeEventListener('resize',resizeHandler);document.removeEventListener('fullscreenchange',resizeHandler)}if(map){map.remove();map=null}};
+ },[origin,destination]);
+ return <div className="shipment-globe-wrap">
+  <div ref={mapRef} className="shipment-globe-map" role="img" aria-label={'World map showing country names and a route from '+origin+' to '+destination}/>
+  <button type="button" className="parcel-map-fullscreen" aria-label="Expand map" title="Expand map" onClick={()=>{const node=mapRef.current;if(!node)return;if(document.fullscreenElement)document.exitFullscreen?.();else node.requestFullscreen?.();window.setTimeout(()=>{const w=window as any;if(w.L&&node)w.L.DomEvent?null:null;window.dispatchEvent(new Event('resize'))},250)}}>⛶</button>
+  {mapError&&<div className="live-map-fallback">The map could not load. Check your internet connection and refresh the page.</div>}
+  <div className="globe-note route-map-note">Country names and borders are shown across the map. The line connects the origin and destination countries; it is not live GPS tracking.</div>
  </div>
 }
+
 function HomeLongForm(){return <section className="content long-home"><div className="shipment-info-section"><div><span className="eyebrow">Delivery visibility</span><h2>Everything important, without the clutter.</h2><p>Parcel Shipment keeps the practical details together: current status, route, estimated delivery, location, shipment history and delivery information.</p></div><div className="info-points"><div><strong>01 · Current status</strong><span>See whether a shipment is received, processing, moving, out for delivery or delivered.</span></div><div><strong>02 · Route visibility</strong><span>View origin, destination and current location when those details are available.</span></div><div><strong>03 · Shipment history</strong><span>Follow important events in order and understand what happened at each stage.</span></div></div></div><div className="shipment-photo-band"><img src="https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1600&q=85" alt="Cardboard parcels prepared for shipment"/><div><span className="eyebrow">Shipment journey</span><h2>From pickup to the final delivery.</h2><p>Tracking is more useful when the journey is easy to follow. Check where a parcel started, where it is now and what happens next.</p></div></div><div className="delivery-gallery"><div className="gallery-head"><span className="eyebrow">Shipment network</span><h2>See the journey behind every parcel.</h2><p>Delivery-focused visuals for the stages a shipment can pass through.</p></div><div className="gallery-grid"><div className="gallery-card gallery-wide"><img src="https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=1400&q=85" alt="Packages inside a logistics warehouse"/><span>Warehouse sorting and handling</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1587293852726-70cdb56c2866?auto=format&fit=crop&w=900&q=85" alt="Packages moving through a warehouse"/><span>Packages moving through the network</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=900&q=85" alt="Delivery vehicle on the road"/><span>Transportation between locations</span></div><div className="gallery-card"><img src="https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&fit=crop&w=1200&q=85" alt="Parcel boxes ready for delivery"/><span>Final-mile delivery preparation</span></div></div></div><div className="tracking-essentials"><div className="section-heading"><span className="eyebrow">Tracking essentials</span><h2>What you can check for a shipment.</h2><p>The tracking page is designed around the information customers normally need while a parcel is moving.</p></div><div className="essentials-grid"><div><MapPin/><h3>Current location</h3><p>See the latest available location and map position when coordinates have been provided.</p></div><div><Truck/><h3>Route and movement</h3><p>Review origin, destination, shipping method and the latest movement update.</p></div><div><Clock3/><h3>Estimated delivery</h3><p>Keep the expected delivery date visible alongside the current shipment status.</p></div><div><Package/><h3>Package details</h3><p>View the item description, weight, dimensions and reference information when available.</p></div><div><CheckCircle2/><h3>Shipment history</h3><p>Read the timeline of completed and upcoming shipment events in order.</p></div><div><ShieldCheck/><h3>Delivery information</h3><p>Check delivery instructions, documents and proof of delivery when provided.</p></div></div></div><div className="status-guide"><div className="section-heading"><span className="eyebrow">Status guide</span><h2>Know what each tracking update means.</h2></div><div className="status-guide-grid"><div><b>Order received</b><span>Your shipment record has been created and received.</span></div><div><b>Processing</b><span>The parcel is being prepared for its next movement.</span></div><div><b>In transit</b><span>The shipment is moving between locations.</span></div><div><b>Arrived at facility</b><span>The parcel has reached a processing facility.</span></div><div><b>Out for delivery</b><span>The parcel is in the delivery stage and may arrive soon.</span></div><div><b>Delivered</b><span>The shipment has been marked as delivered.</span></div></div></div><div className="delivery-advice"><div><span className="eyebrow">Before delivery</span><h2>Keep your tracking number handy.</h2><p>Use the same tracking number to return to the latest shipment information. If a delivery exception, address issue or customs hold appears, review the latest event and contact support when needed.</p></div><img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=1100&q=85" alt="Delivery van carrying parcels"/></div><div className="how-section"><div className="how-head"><span className="eyebrow">How it works</span><h2>Track a shipment in three steps.</h2></div><div className="how-grid"><div><b>01</b><h3>Enter your number</h3><p>Use the tracking number supplied for your shipment.</p></div><div><b>02</b><h3>Check the latest update</h3><p>Review status, location, estimated delivery and recent events.</p></div><div><b>03</b><h3>Follow the journey</h3><p>Return to the same tracking number whenever you need an update.</p></div></div></div></section>}
 
 function LanguageSwitcher(p:{language:string;setLanguage:(x:string)=>void;open:boolean;setOpen:(x:boolean)=>void}){const current=LANGUAGE_OPTIONS.find(x=>x[0]===p.language)?.[1]||'English';const change=(code:string)=>{p.setLanguage(code);p.setOpen(false);document.documentElement.lang=code;const select=document.querySelector('.goog-te-combo') as HTMLSelectElement|null;if(select){select.value=code;select.dispatchEvent(new Event('change'))}};return <div className="language-switcher"><button className="language-button" onClick={()=>p.setOpen(!p.open)} aria-label="Change website language" aria-expanded={p.open}>🌐 <span>Change language</span><ChevronRight size={15} className={p.open?'language-chevron-open':''}/></button>{p.open&&<div className="language-menu"><div className="language-menu-title">Select website language</div>{LANGUAGE_OPTIONS.map(([code,name])=><button key={code} className={p.language===code?'selected-language':''} onClick={()=>change(code)}><span>{name}</span>{p.language===code&&<CheckCircle2 size={14}/>}</button>)}</div>}<div id="google_translate_element" className="google-translate-hidden"/></div>}
