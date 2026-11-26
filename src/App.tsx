@@ -169,8 +169,8 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    if(currentKey&&currentKey!==originKey&&currentKey!==destinationKey){
     L.circleMarker(live.coords,{radius:7,color:'#ffffff',weight:3,fillColor:'#f59e0b',fillOpacity:1}).addTo(map).bindPopup('<strong>Current location</strong><br/>'+live.label.replace(/[<>&"]/g,''));
    }
-   const bounds=L.latLngBounds([from.coords,to.coords]);
-   map.fitBounds(bounds,{padding:[42,42],maxZoom:4});
+   // Keep the world map at its default zoom; do not auto-fit to the route.
+   map.setView([20,0],1);
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
    setTimeout(()=>{if(!disposed)map.invalidateSize()},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
