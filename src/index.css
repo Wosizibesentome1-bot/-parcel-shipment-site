@@ -238,3 +238,20 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 .parcel-origin-map-label{background:#f1eaff!important}
 .parcel-destination-map-label{background:#fff0e5!important}
 .parcel-current-map-label{background:#e6f5ec!important}
+
+
+/* Country-to-country interactive shipment map */
+.shipment-globe-wrap{position:relative;width:100%;min-height:440px;height:clamp(380px,52vw,560px);overflow:hidden;border-radius:14px;background:#dce8ed;border:1px solid #d8e2e9}
+.shipment-globe-map{position:relative;width:100%;height:100%;min-height:440px;background:#dce8ed;z-index:1}
+.shipment-globe-map .leaflet-container{width:100%;height:100%;min-height:440px;font:inherit;background:#dce8ed}
+.shipment-globe-map .leaflet-tile{max-width:none!important}
+.parcel-map-fullscreen{position:absolute;z-index:1000;right:16px;top:16px;width:54px;height:54px;border:1px solid #d9e2ea;border-radius:12px;background:#fff;color:#203244;font-size:30px;line-height:1;box-shadow:0 4px 18px #17324a22;cursor:pointer}
+.parcel-map-pin-shell{background:transparent;border:0}
+.parcel-map-pin{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border:4px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 12px #172b4344}
+.parcel-map-pin span{width:9px;height:9px;border-radius:50%;background:#fff}
+.parcel-map-pin-origin{background:#e87520}
+.parcel-map-pin-destination{background:#159b70}
+.parcel-origin-map-label,.parcel-destination-map-label{padding:5px 9px!important;border:0!important;border-radius:6px!important;background:#fff!important;color:#172b43!important;font-size:13px!important;font-weight:800!important;box-shadow:0 2px 10px #172b4322!important}
+.parcel-origin-map-label:before,.parcel-destination-map-label:before{display:none!important}
+.route-map-note{position:absolute;z-index:500;left:12px;right:78px;bottom:12px;max-width:none;padding:9px 12px;border:1px solid #dce5ec;border-radius:8px;background:#ffffffed;color:#526173;font-size:12px;line-height:1.45;text-align:left;box-shadow:0 2px 10px #172b4312}
+@media(max-width:600px){.shipment-globe-wrap{height:430px;min-height:430px}.shipment-globe-map,.shipment-globe-map .leaflet-container{min-height:430px}.parcel-map-fullscreen{right:10px;top:10px;width:46px;height:46px}.route-map-note{left:8px;right:64px;bottom:8px;font-size:10px;padding:7px 9px}}
