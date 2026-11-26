@@ -30,7 +30,7 @@ const STATUSES = ['All','Order received','Processing','Picked up','In transit','
 const blank = {
   trackingNumber:'', customerName:'', itemDescription:'', country:'', quantity:1, status:'Order received',
   eta:'', origin:'', destination:'', carrier:'ParcelTrack Express', shippingMethod:'Standard',
-  weight:'', dimensions:'', reference:'', customerEmail:'', currentLocation:'', homeAddress:'', deliveryInstructions:'',
+  weight:'', dimensions:'', reference:'', customerEmail:'', currentLocation:'', homeAddress:'', showHomeAddressPublic:false, deliveryInstructions:'',
   latitude:undefined as number|undefined, longitude:undefined as number|undefined, itemImages:[] as string[]
 };
 
@@ -203,6 +203,7 @@ function Editor({shipment,close,save,setError}:{shipment:Shipment|null;close:()=
       <label>Order/reference number<input value={form.reference||''} onChange={e=>set('reference',e.target.value)}/></label>
       <label>Customer email<input type="email" value={form.customerEmail||''} onChange={e=>set('customerEmail',e.target.value)}/></label>
       <label>Home address<textarea value={form.homeAddress||''} onChange={e=>set('homeAddress',e.target.value)} placeholder="Enter the customer's full home address"/></label>
+      <label className="wide-field"><span><input type="checkbox" checked={Boolean(form.showHomeAddressPublic)} onChange={e=>set('showHomeAddressPublic',e.target.checked)}/> Display home address publicly on this tracking page</span><small>Enable only when the recipient has agreed to public display.</small></label>
       <label>Current location<input value={form.currentLocation||''} onChange={e=>set('currentLocation',e.target.value)}/></label>
       <label>Status<select value={form.status||'Order received'} onChange={e=>set('status',e.target.value)}>{STATUSES.slice(1).map(s=><option key={s}>{s}</option>)}</select></label>
       <label>Current latitude<input type="number" step="any" value={form.latitude??''} onChange={e=>set('latitude',e.target.value===''?undefined:Number(e.target.value))} placeholder="e.g. 43.6532"/></label>
