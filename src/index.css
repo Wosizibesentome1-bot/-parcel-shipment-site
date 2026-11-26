@@ -480,3 +480,21 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
 @media(min-width:700px){
  .reference-style .shipment-world-map-only .shipment-map-canvas{height:clamp(380px,48vw,520px)!important}
 }
+
+
+/* Clear continent headings over the country-labeled world map */
+.reference-style .continent-name-label{
+  background:transparent!important;border:0!important;box-shadow:none!important;
+  pointer-events:none!important;display:flex!important;align-items:center!important;
+  justify-content:center!important;overflow:visible!important;
+}
+.reference-style .continent-name-label span{
+  display:inline-block!important;color:#17233b!important;
+  font-size:clamp(10px,1.45vw,15px)!important;font-weight:800!important;
+  letter-spacing:1.1px!important;text-align:center!important;white-space:nowrap!important;
+  text-shadow:0 1px 0 #fff,1px 0 0 #fff,-1px 0 0 #fff,0 -1px 0 #fff,0 1px 4px rgba(255,255,255,.8)!important;
+  opacity:.88!important;
+}
+@media(max-width:430px){
+ .reference-style .continent-name-label span{font-size:9px!important;letter-spacing:.5px!important}
+}
