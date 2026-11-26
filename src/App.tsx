@@ -156,6 +156,13 @@ function ShipmentGlobe({origin,destination}:{origin:string;destination:string;cu
    map=L.map(mapRef.current,{zoomControl:true,scrollWheelZoom:true,worldCopyJump:true,zoomAnimation:true,fadeAnimation:true,zoomSnap:0.25,zoomDelta:0.5,minZoom:1,maxZoom:8}).setView([20,0],1);
    mapInstance.current=map;
    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap contributors &copy; CARTO',subdomains:'abcd',maxZoom:8}).addTo(map);
+   const continentLabels:[string,number,number][]=[
+    ['NORTH AMERICA',48,-108],['SOUTH AMERICA',-17,-62],['EUROPE',53,18],
+    ['AFRICA',4,20],['ASIA',43,88],['AUSTRALIA',-25,135]
+   ];
+   const continentPane=map.createPane('continentLabels');continentPane.style.zIndex='650';continentPane.style.pointerEvents='none';
+   continentLabels.forEach(([name,lat,lng])=>L.marker([lat,lng],{pane:'continentLabels',interactive:false,icon:L.divIcon({className:'continent-name-label',html:'<span>'+name+'</span>',iconSize:[150,24],iconAnchor:[75,12]})}).addTo(map));
+
    resizeHandler=()=>map?.invalidateSize();window.addEventListener('resize',resizeHandler);document.addEventListener('fullscreenchange',resizeHandler);
    setTimeout(()=>{if(!disposed){map.invalidateSize();map.setView([20,0],1,false)}},350);
   }).catch(()=>{if(!disposed)setMapError(true)});
