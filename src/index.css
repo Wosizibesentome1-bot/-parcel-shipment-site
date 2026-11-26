@@ -392,3 +392,51 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
   .reference-style .shipment-map-place small{font-size:10px!important}
   .reference-style .shipment-map-flight b{font-size:18px!important}
 }
+
+
+/* Keep the shipment map compact and readable on phones and tablets */
+.reference-style .shipment-map-canvas{
+  height:clamp(180px,44vw,430px)!important;
+  min-height:180px!important;
+  max-height:430px!important;
+}
+.reference-style .shipment-map-style{left:10px!important;top:10px!important;border-radius:9px!important}
+.reference-style .shipment-map-style button{padding:8px 11px!important;font-size:12px!important;line-height:1.2!important}
+.reference-style .shipment-map-controls{right:9px!important;gap:6px!important}
+.reference-style .shipment-map-controls button{
+  width:34px!important;height:34px!important;min-width:34px!important;
+  border-radius:9px!important;font-size:20px!important;line-height:1!important;
+}
+.reference-style .shipment-map-controls button:last-child{font-size:19px!important}
+.reference-style .parcel-map-pin{width:28px!important;height:36px!important;border-width:2px!important}
+.reference-style .parcel-map-pin i{width:9px!important;height:9px!important}
+.reference-style .parcel-country-label{
+  max-width:112px!important;white-space:normal!important;
+  padding:4px 7px!important;font-size:11px!important;line-height:1.15!important;
+  border-radius:6px!important;
+}
+.reference-style .parcel-plane-icon{font-size:24px!important}
+.reference-style .shipment-map-summary{
+  grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr)!important;
+  gap:6px!important;padding:9px 10px!important;min-height:62px!important;
+}
+.reference-style .shipment-map-place{gap:7px!important;min-width:0!important}
+.reference-style .summary-pin{width:25px!important;height:25px!important;flex:0 0 25px!important}
+.reference-style .summary-pin:after{width:8px!important;height:8px!important}
+.reference-style .shipment-map-place small{font-size:10px!important}
+.reference-style .shipment-map-place strong{
+  font-size:clamp(10px,2.8vw,14px)!important;line-height:1.2!important;
+  overflow-wrap:anywhere!important;word-break:normal!important;
+}
+.reference-style .shipment-map-flight b{font-size:19px!important}
+@media(min-width:700px){
+  .reference-style .shipment-map-canvas{height:clamp(300px,36vw,430px)!important}
+  .reference-style .shipment-map-style button{padding:10px 14px!important;font-size:13px!important}
+  .reference-style .shipment-map-controls button{width:40px!important;height:40px!important}
+}
+@media(max-width:390px){
+  .reference-style .shipment-map-canvas{height:46vw!important;min-height:175px!important}
+  .reference-style .shipment-map-summary{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr)!important;gap:3px!important;padding:8px 6px!important}
+  .reference-style .shipment-map-place strong{font-size:10px!important}
+  .reference-style .summary-pin{width:21px!important;height:21px!important;flex-basis:21px!important}
+}
