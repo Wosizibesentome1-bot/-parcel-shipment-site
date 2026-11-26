@@ -220,7 +220,7 @@ function publicShipment(s,includeHomeAddress=false){
   return {
     id:s.id,tracking:s.trackingNumber,customerName:s.customerName,product:s.itemDescription,country:s.destination,
     status:s.status,eta:s.eta,origin:s.origin,destination:s.destination,carrier:s.carrier,shippingMethod:s.shippingMethod||'Standard',
-    weight:s.weight,reference:s.reference,currentLocation:s.currentLocation||s.origin,customerEmail:s.customerEmail,
+    weight:s.weight,dimensions:s.packageDimensions||'',quantity:s.quantity??null,reference:s.reference,currentLocation:s.currentLocation||s.origin,customerEmail:s.customerEmail,
     lastUpdated:s.updatedAt||s.createdAt,
     events:(s.events||[]).map((e,i)=>({title:e.status,location:e.location,time:e.date,done:i<(s.events||[]).length-1||s.status==='Delivered'})),
     itemImages:Array.isArray(s.itemImages)?s.itemImages:[],
