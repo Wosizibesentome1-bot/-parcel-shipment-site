@@ -440,3 +440,43 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
   .reference-style .shipment-map-place strong{font-size:10px!important}
   .reference-style .summary-pin{width:21px!important;height:21px!important;flex-basis:21px!important}
 }
+
+
+/* Clean world atlas: country names and borders only, no route or pins */
+.reference-style .shipment-world-map-only{
+  width:100%!important;max-width:100%!important;padding:0!important;
+  margin:0!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;background:#e9eef2!important;overflow:hidden!important;
+}
+.reference-style .shipment-world-map-only .shipment-map-canvas{
+  position:relative!important;width:100%!important;height:clamp(260px,58vw,520px)!important;
+  min-height:260px!important;max-height:520px!important;overflow:hidden!important;
+  border-radius:0!important;background:#e8edf0!important;
+}
+.reference-style .shipment-world-map-only .shipment-globe-map{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  background:#e8edf0!important;
+}
+.reference-style .shipment-world-map-only .leaflet-tile{filter:none!important}
+.reference-style .shipment-world-map-only .leaflet-control-zoom{
+  border:0!important;box-shadow:0 1px 6px rgba(0,0,0,.18)!important;
+}
+.reference-style .shipment-world-fullscreen{
+  position:absolute!important;z-index:700!important;right:12px!important;top:12px!important;
+  width:42px!important;height:42px!important;border:0!important;border-radius:9px!important;
+  background:#fff!important;color:#17264b!important;font-size:23px!important;
+  box-shadow:0 1px 6px rgba(0,0,0,.2)!important;cursor:pointer!important;
+}
+.reference-style .shipment-world-map-only:fullscreen{
+  width:100vw!important;height:100vh!important;background:#e8edf0!important;
+}
+.reference-style .shipment-world-map-only:fullscreen .shipment-map-canvas{
+  width:100vw!important;height:100vh!important;max-height:none!important;
+}
+@media(max-width:430px){
+ .reference-style .shipment-world-map-only .shipment-map-canvas{height:clamp(250px,72vw,330px)!important;min-height:250px!important}
+ .reference-style .shipment-world-fullscreen{right:9px!important;top:9px!important;width:38px!important;height:38px!important}
+}
+@media(min-width:700px){
+ .reference-style .shipment-world-map-only .shipment-map-canvas{height:clamp(380px,48vw,520px)!important}
+}
