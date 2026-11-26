@@ -100,6 +100,7 @@ function countryLatLon(place:string):[number,number]{
 }
 // Resolve city, airport, street or country names to published map coordinates.
 // If a precise match is unavailable, retain the country-level fallback and disclose it.
+// Display the resolved country name directly on each shipment route pin.
 function countryDisplayName(place:string){const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States','united states of america':'United States',uk:'United Kingdom',uae:'United Arab Emirates','cote d ivoire':'Côte d’Ivoire'};return aliases[key]||key.split(' ').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' ');}
 async function resolveMapPlace(place:string):Promise<{coords:[number,number];precise:boolean;label:string;country:string}>{
  const query=(place||'').trim();
