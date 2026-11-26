@@ -100,9 +100,10 @@ function countryLatLon(place:string):[number,number]{
 }
 // Resolve city, airport, street or country names to published map coordinates.
 // If a precise match is unavailable, retain the country-level fallback and disclose it.
-async function resolveMapPlace(place:string):Promise<{coords:[number,number];precise:boolean;label:string}>{
+function countryDisplayName(place:string){const key=resolveCountry(place);const aliases:Record<string,string>={usa:'United States',us:'United States','united states of america':'United States',uk:'United Kingdom',uae:'United Arab Emirates','cote d ivoire':'Côte d’Ivoire'};return aliases[key]||key.split(' ').map(part=>part?part[0].toUpperCase()+part.slice(1):part).join(' ');}
+async function resolveMapPlace(place:string):Promise<{coords:[number,number];precise:boolean;label:string;country:string}>{
  const query=(place||'').trim();
- if(!query)return {coords:[20,0],precise:false,label:'Location not supplied'};
+ if(!query)return {coords:[20,0],precise:false,label:'Location not supplied',country:'Unknown'};
  try{
   const url='https://photon.komoot.io/api/?q='+encodeURIComponent(query)+'&limit=1&lang=en';
   const response=await fetch(url,{headers:{'Accept':'application/json'}});
@@ -112,11 +113,11 @@ async function resolveMapPlace(place:string):Promise<{coords:[number,number];pre
    if(Array.isArray(coordinates)&&coordinates.length>=2&&Number.isFinite(coordinates[0])&&Number.isFinite(coordinates[1])){
     const props=feature.properties||{};
     const label=[props.name,props.city,props.state,props.country].filter(Boolean).filter((v:string,i:number,a:string[])=>a.indexOf(v)===i).join(', ');
-    return {coords:[Number(coordinates[1]),Number(coordinates[0])],precise:true,label:label||query};
+    return {coords:[Number(coordinates[1]),Number(coordinates[0])],precise:true,label:label||query,country:props.country||countryDisplayName(query)};
    }
   }
  }catch{}
- return {coords:countryLatLon(query),precise:false,label:query};
+ return {coords:countryLatLon(query),precise:false,label:query,country:countryDisplayName(query)};
 }
 // Sample a great-circle corridor so international routes follow the curvature of the earth
 // rather than drawing an unrealistic straight line through latitude/longitude space.
@@ -163,8 +164,8 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    L.polyline(routePoints,{color:'#ffffff',weight:8,opacity:.95,lineCap:'round'}).addTo(map);
    L.polyline(routePoints,{color:'#1769d2',weight:4,opacity:.98,lineCap:'round'}).addTo(map);
    const pin=(kind:string,label:string)=>L.divIcon({className:'parcel-route-marker-wrap',html:'<div class="parcel-route-marker '+kind+'"><span></span><b>'+label.replace(/[<>&"]/g,'')+'</b></div>',iconSize:[28,38],iconAnchor:[14,34]});
-   L.marker(from.coords,{icon:pin('origin','Origin'),keyboard:false}).addTo(map).bindPopup('<strong>Origin</strong><br/>'+from.label.replace(/[<>&"]/g,''));
-   L.marker(to.coords,{icon:pin('destination','Destination'),keyboard:false}).addTo(map).bindPopup('<strong>Destination</strong><br/>'+to.label.replace(/[<>&"]/g,''));
+   L.marker(from.coords,{icon:pin('origin',from.country),keyboard:false}).addTo(map).bindPopup('<strong>Origin: '+from.country.replace(/[<>&"]/g,'')+'</strong><br/>'+from.label.replace(/[<>&"]/g,''));
+   L.marker(to.coords,{icon:pin('destination',to.country),keyboard:false}).addTo(map).bindPopup('<strong>Destination: '+to.country.replace(/[<>&"]/g,'')+'</strong><br/>'+to.label.replace(/[<>&"]/g,''));
    const currentKey=(current||origin).trim().toLowerCase(),originKey=(origin||'').trim().toLowerCase(),destinationKey=(destination||'').trim().toLowerCase();
    if(currentKey&&currentKey!==originKey&&currentKey!==destinationKey){
     L.circleMarker(live.coords,{radius:7,color:'#ffffff',weight:3,fillColor:'#f59e0b',fillOpacity:1}).addTo(map).bindPopup('<strong>Current location</strong><br/>'+live.label.replace(/[<>&"]/g,''));
