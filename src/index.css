@@ -336,3 +336,59 @@ html,body,#root{width:100%;max-width:100%;min-height:100%;margin:0;overflow-x:hi
   .shipment-map-canvas{height:clamp(300px,46vw,360px)!important;min-height:300px!important}
   .shipment-map-summary{padding:12px 10px!important;min-height:66px!important}
 }
+
+
+/* Responsive full-screen-width route map: scales cleanly on iPhone and iPad */
+.reference-style .route-map{
+  box-sizing:border-box!important;
+  position:relative!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  margin:20px 0 0!important;
+  padding:14px clamp(8px,1.5vw,18px) 0!important;
+  border-radius:0!important;
+  overflow:visible!important;
+}
+.reference-style .route-map-head{
+  box-sizing:border-box!important;
+  width:100%!important;
+  padding:0 clamp(5px,1vw,12px) 12px!important;
+}
+.reference-style .shipment-map-design{
+  box-sizing:border-box!important;
+  width:100%!important;
+  max-width:100%!important;
+  margin:0 auto!important;
+  overflow:hidden!important;
+  border-radius:14px!important;
+}
+.reference-style .shipment-map-canvas{
+  display:block!important;
+  width:100%!important;
+  height:clamp(220px, 56vw, 520px)!important;
+  min-height:0!important;
+  max-height:520px!important;
+}
+.reference-style .shipment-map-summary{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-height:64px!important;
+  padding:10px clamp(8px,2vw,22px)!important;
+}
+@media (min-width:700px){
+  .reference-style .shipment-map-canvas{height:clamp(380px, 48vw, 520px)!important}
+}
+@media (max-width:430px){
+  .reference-style .route-map{padding:10px 5px 0!important}
+  .reference-style .route-map-head{padding:0 6px 10px!important}
+  .reference-style .route-map-head>div strong{font-size:18px!important}
+  .reference-style .route-live{font-size:10px!important;padding:6px 8px!important}
+  .reference-style .shipment-map-canvas{height:56vw!important;min-height:220px!important;max-height:280px!important}
+  .reference-style .shipment-map-summary{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr)!important;gap:4px!important;padding:9px 7px!important}
+  .reference-style .shipment-map-place{gap:6px!important;min-width:0!important}
+  .reference-style .shipment-map-place strong{font-size:12px!important;overflow-wrap:anywhere!important}
+  .reference-style .shipment-map-place small{font-size:10px!important}
+  .reference-style .shipment-map-flight b{font-size:18px!important}
+}
