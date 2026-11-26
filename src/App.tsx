@@ -150,6 +150,7 @@ function ensureGlobe():Promise<any>{
 function ShipmentGlobe({origin,destination,current,status}:{origin:string;destination:string;current?:string;status?:string;movementStartedAt?:string|null;movementDurationMs?:number|null;movementStartLocation?:string|null}){
  const mapRef=useRef<HTMLDivElement|null>(null),mapInstance=useRef<any>(null);
  const [mapError,setMapError]=useState(false);
+ const [countryLabels,setCountryLabels]=useState({origin:countryDisplayName(origin),destination:countryDisplayName(destination)});
  useEffect(()=>{
   let disposed=false,resizeHandler:(()=>void)|null=null,map:any=null;
   const load=()=>new Promise<any>((resolve,reject)=>{const w=window as any;if(!document.querySelector('link[data-parcel-leaflet]')){const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';css.dataset.parcelLeaflet='true';document.head.appendChild(css)}if(w.L){resolve(w.L);return}const script=document.createElement('script');script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';script.async=true;script.dataset.parcelLeaflet='true';script.onload=()=>resolve(w.L);script.onerror=()=>reject(new Error('Leaflet failed'));document.head.appendChild(script)});
@@ -161,6 +162,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'Tiles &copy; Esri',maxZoom:8}).addTo(map);
    const [from,to,live]=await Promise.all([resolveMapPlace(origin),resolveMapPlace(destination),resolveMapPlace(current||origin)]);
    if(disposed||!map)return;
+   setCountryLabels({origin:from.country,destination:to.country});
    const routePoints=greatCircleRoute(from.coords,to.coords,100);
    L.polyline(routePoints,{color:'#ffffff',weight:8,opacity:.95,lineCap:'round'}).addTo(map);
    L.polyline(routePoints,{color:'#1769d2',weight:4,opacity:.98,lineCap:'round'}).addTo(map);
@@ -181,7 +183,7 @@ function ShipmentGlobe({origin,destination,current,status}:{origin:string;destin
  return <div className="shipment-map-design shipment-route-map">
   <div className="shipment-map-canvas">
    <div ref={mapRef} className="shipment-globe-map" role="img" aria-label="Shipment route map showing origin, destination and the international route"/>
-   <div className="shipment-route-legend"><span><i className="legend-origin"/> Origin</span><span><i className="legend-route"/> Route</span><span><i className="legend-destination"/> Destination</span></div>
+   <div className="shipment-route-legend"><span><i className="legend-origin"/> {countryLabels.origin}</span><span><i className="legend-route"/> Route</span><span><i className="legend-destination"/> {countryLabels.destination}</span></div>
    <button className="shipment-world-fullscreen" type="button" aria-label="View map fullscreen" onClick={()=>{const el=mapRef.current?.parentElement;if(!el)return;if(document.fullscreenElement)document.exitFullscreen?.();else el.requestFullscreen?.();setTimeout(()=>mapInstance.current?.invalidateSize(),250)}}>⛶</button>
    {mapError&&<div className="live-map-fallback">Map unavailable. Please refresh.</div>}
   </div>
